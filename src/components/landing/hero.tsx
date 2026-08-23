@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, FileText, Briefcase, Zap } from "lucide-react";
+import Link from "next/link";
 
 export function Hero() {
   return (

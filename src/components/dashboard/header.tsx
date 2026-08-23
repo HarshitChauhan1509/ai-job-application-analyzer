@@ -26,6 +26,7 @@ export function Header() {
       <div className="flex items-center gap-4">
         {/* Mobile menu trigger */}
         <Sheet>
+          {/* @ts-expect-error - asChild type issue with radix-ui */}
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="md:hidden">
               <Menu size={20} />
