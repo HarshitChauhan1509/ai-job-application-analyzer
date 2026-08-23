@@ -55,12 +55,14 @@ export function Navbar() {
               {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
             </button>
           )}
-          <Link href="/demo" className="hidden sm:block text-sm font-medium hover:text-primary transition-colors">
-            Explore Demo
+          <Link href="/login" className="hidden sm:block text-sm font-medium hover:text-primary transition-colors">
+            Sign In
           </Link>
-          <Button className="rounded-full shadow-md hover:shadow-lg transition-all">
-            Analyze my resume
-          </Button>
+          <Link href="/register">
+            <Button className="rounded-full shadow-md hover:shadow-lg transition-all">
+              Get Started
+            </Button>
+          </Link>
         </div>
       </div>
     </motion.header>

@@ -45,13 +45,17 @@ export function Hero() {
           transition={{ duration: 0.5, delay: 0.3 }}
           className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto"
         >
-          <Button size="lg" className="w-full sm:w-auto rounded-full text-base h-12 px-8 shadow-xl shadow-primary/20">
-            Analyze my resume
-            <ArrowRight className="ml-2" size={18} />
-          </Button>
-          <Button size="lg" variant="outline" className="w-full sm:w-auto rounded-full text-base h-12 px-8">
-            Explore Demo
-          </Button>
+          <Link href="/register" className="w-full sm:w-auto">
+            <Button size="lg" className="w-full rounded-full text-base h-12 px-8 shadow-xl shadow-primary/20">
+              Start for free
+              <ArrowRight className="ml-2" size={18} />
+            </Button>
+          </Link>
+          <Link href="/dashboard" className="w-full sm:w-auto">
+            <Button size="lg" variant="outline" className="w-full rounded-full text-base h-12 px-8">
+              Explore Demo
+            </Button>
+          </Link>
         </motion.div>
 
         {/* Animated Dashboard Mockup */}
