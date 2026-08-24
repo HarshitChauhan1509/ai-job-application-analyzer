@@ -1,0 +1,207 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  profile           Profile?
+  resumes           Resume[]
+  jobs              Job[]
+  applications      Application[]
+  interviewSessions InterviewSession[]
+  aiConversations   AIConversation[]
+  notifications     Notification[]
+}
+
+model Profile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline  String?
+  bio       String?
+  website   String?
+  linkedin  String?
+  github    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Resume {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  fileUrl   String
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  analysis     ResumeAnalysis?
+  applications Application[]
+  jobMatches   JobMatch[]
+}
+
+model ResumeAnalysis {
+  id              String   @id @default(cuid())
+  resumeId        String   @unique
+  resume          Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  overallScore    Int
+  atsScore        Int
+  skillsScore     Int
+  experienceScore Int
+  strengths       String[] // Stored as JSON array or string array
+  weaknesses      String[]
+  missingKeywords String[]
+  recommendations String[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Job {
+  id                   String   @id @default(cuid())
+  userId               String
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company              String
+  position             String
+  description          String   @db.Text
+  url                  String?
+  location             String?
+  employmentType       String?
+  experienceRequirement String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  analysis     JobAnalysis?
+  applications Application[]
+  jobMatches   JobMatch[]
+}
+
+model JobAnalysis {
+  id              String   @id @default(cuid())
+  jobId           String   @unique
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  requiredSkills  String[]
+  preferredSkills String[]
+  responsibilities String[]
+  keywords        String[]
+  seniority       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Application {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  resumeId  String?
+  resume    Resume?  @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+  status    String   @default("SAVED") // SAVED, APPLIED, SCREENING, INTERVIEW, OFFER, REJECTED
+  notes     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  events ApplicationEvent[]
+}
+
+model ApplicationEvent {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  type          String // e.g., STATUS_CHANGE, NOTE_ADDED, EMAIL_RECEIVED
+  description   String?     @db.Text
+  date          DateTime    @default(now())
+  createdAt     DateTime    @default(now())
+}
+
+model JobMatch {
+  id               String   @id @default(cuid())
+  resumeId         String
+  resume           Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobId            String
+  job              Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  overallScore     Int
+  skillsScore      Int
+  experienceScore  Int
+  keywordsScore    Int
+  strongMatches    String[]
+  missingSkills    String[]
+  missingKeywords  String[]
+  recommendations  String[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([resumeId, jobId])
+}
+
+model InterviewSession {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          String
+  difficulty    String
+  overallScore  Float?
+  feedback      String?  @db.Text
+  completedAt   DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  questions InterviewQuestion[]
+}
+
+model InterviewQuestion {
+  id                 String           @id @default(cuid())
+  interviewSessionId String
+  interviewSession   InterviewSession @relation(fields: [interviewSessionId], references: [id], onDelete: Cascade)
+  question           String           @db.Text
+  category           String
+  orderIndex         Int
+  createdAt          DateTime         @default(now())
+
+  answer InterviewAnswer?
+}
+
+model InterviewAnswer {
+  id                  String            @id @default(cuid())
+  interviewQuestionId String            @unique
+  interviewQuestion   InterviewQuestion @relation(fields: [interviewQuestionId], references: [id], onDelete: Cascade)
+  answer              String            @db.Text
+  score               Float?
+  feedback            String?           @db.Text
+  createdAt           DateTime          @default(now())
+}
+
+model AIConversation {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  context   String?  // e.g., "RESUME_IMPROVEMENT"
+  messages  Json     // Stored as JSON array of {role, content}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   // e.g., ANALYSIS_COMPLETE, INTERVIEW_REMINDER
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+}
