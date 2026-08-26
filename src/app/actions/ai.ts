@@ -53,3 +53,50 @@ export async function processJobAction(jobId: string, jobDescriptionText: string
     return { success: false, error: "Failed to analyze job" };
   }
 }
+
+import { matchJobToResume } from "@/lib/ai/job-matcher";
+import { improveResumeBullet, ImprovementAction } from "@/lib/ai/resume-improver";
+
+export async function matchJobAction(resumeId: string, jobId: string, resumeText: string, jobText: string) {
+  try {
+    const matchResult = await matchJobToResume(resumeText, jobText);
+    
+    const savedMatch = await prisma.jobMatch.upsert({
+      where: {
+        resumeId_jobId: {
+          resumeId,
+          jobId,
+        }
+      },
+      create: {
+        resumeId,
+        jobId,
+        ...matchResult,
+      },
+      update: {
+        ...matchResult,
+      }
+    });
+
+    revalidatePath(`/dashboard/match/${resumeId}/${jobId}`);
+    
+    return { success: true, match: savedMatch };
+  } catch (error) {
+    console.error("Error in matchJobAction:", error);
+    return { success: false, error: "Failed to match job" };
+  }
+}
+
+export async function improveBulletAction(
+  originalBullet: string, 
+  action: ImprovementAction, 
+  jobContext?: string
+) {
+  try {
+    const result = await improveResumeBullet(originalBullet, action, jobContext);
+    return { success: true, improvement: result };
+  } catch (error) {
+    console.error("Error in improveBulletAction:", error);
+    return { success: false, error: "Failed to improve bullet point" };
+  }
+}
