@@ -100,3 +100,28 @@ export async function improveBulletAction(
     return { success: false, error: "Failed to improve bullet point" };
   }
 }
+
+import { generateInterviewQuestions, evaluateInterviewAnswer } from "@/lib/ai/interview-coach";
+
+export async function generateQuestionsAction(role: string, difficulty: string, numQuestions: number, categories: string[]) {
+  try {
+    const result = await generateInterviewQuestions(role, difficulty, numQuestions, categories);
+    // In a real implementation, we would create a new InterviewSession in the DB here
+    // and store the questions.
+    return { success: true, questions: result.questions };
+  } catch (error) {
+    console.error("Error in generateQuestionsAction:", error);
+    return { success: false, error: "Failed to generate interview questions" };
+  }
+}
+
+export async function evaluateAnswerAction(role: string, question: string, answer: string) {
+  try {
+    const evaluation = await evaluateInterviewAnswer(role, question, answer);
+    // In a real implementation, we would store this InterviewAnswer in the DB.
+    return { success: true, evaluation };
+  } catch (error) {
+    console.error("Error in evaluateAnswerAction:", error);
+    return { success: false, error: "Failed to evaluate answer" };
+  }
+}
