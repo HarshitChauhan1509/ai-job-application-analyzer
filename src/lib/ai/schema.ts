@@ -48,3 +48,29 @@ export const ResumeImprovementSchema = z.object({
 });
 
 export type ResumeImprovementOutput = z.infer<typeof ResumeImprovementSchema>;
+
+export const InterviewQuestionsSchema = z.object({
+  questions: z.array(z.object({
+    id: z.string().describe("Unique identifier for the question"),
+    question: z.string().describe("The interview question text"),
+    category: z.string().describe("The category of the question (e.g., Technical, Behavioral, System Design)"),
+  })).describe("List of generated interview questions"),
+});
+
+export type InterviewQuestionsOutput = z.infer<typeof InterviewQuestionsSchema>;
+
+export const InterviewEvaluationSchema = z.object({
+  scores: z.object({
+    technical: z.number().min(0).max(10),
+    communication: z.number().min(0).max(10),
+    specificity: z.number().min(0).max(10),
+    overall: z.number().min(0).max(10),
+  }).describe("Scores out of 10 for different aspects of the answer"),
+  strengths: z.array(z.string()).describe("Strong points in the candidate's answer"),
+  weaknesses: z.array(z.string()).describe("Areas where the answer fell short"),
+  missingConcepts: z.array(z.string()).describe("Important concepts or keywords the candidate failed to mention"),
+  idealStructure: z.string().describe("A brief outline of how a perfect answer would be structured (e.g., STAR method)"),
+  followUpQuestion: z.string().nullable().describe("A potential follow-up question the interviewer might ask based on this answer"),
+});
+
+export type InterviewEvaluationOutput = z.infer<typeof InterviewEvaluationSchema>;
