@@ -64,7 +64,7 @@ export default function InterviewCoachSetupPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="difficulty">Difficulty Level</Label>
-                <Select value={difficulty} onValueChange={setDifficulty}>
+                <Select value={difficulty} onValueChange={(val) => setDifficulty(val || "Intermediate")}>
                   <SelectTrigger id="difficulty">
                     <SelectValue placeholder="Select difficulty" />
                   </SelectTrigger>
