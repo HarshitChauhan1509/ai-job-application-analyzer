@@ -26,12 +26,9 @@ export function Header() {
       <div className="flex items-center gap-4">
         {/* Mobile menu trigger */}
         <Sheet>
-          {/* @ts-expect-error - asChild type issue with radix-ui */}
-          <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="md:hidden">
-              <Menu size={20} />
-              <span className="sr-only">Toggle menu</span>
-            </Button>
+          <SheetTrigger render={<Button variant="ghost" size="icon" className="md:hidden" />}>
+            <Menu size={20} />
+            <span className="sr-only">Toggle menu</span>
           </SheetTrigger>
           <SheetContent side="left" className="w-64 p-0">
             <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
@@ -82,7 +79,7 @@ export function Header() {
           <span className="sr-only">Notifications</span>
         </Button>
         <Avatar className="h-8 w-8 border border-border">
-          <AvatarImage src="/placeholder-avatar.jpg" alt="User" />
+          <AvatarImage src="https://api.dicebear.com/7.x/avataaars/svg?seed=Harshit" alt="User" />
           <AvatarFallback className="bg-primary/10 text-primary font-medium text-xs">HC</AvatarFallback>
         </Avatar>
       </div>

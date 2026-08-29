@@ -66,12 +66,9 @@ export default function JobsPage() {
                   </div>
                 </div>
                 <DropdownMenu>
-                  {/* @ts-expect-error - asChild radix ui issue */}
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
-                      <span className="sr-only">Open menu</span>
-                      <MoreHorizontal size={16} />
-                    </Button>
+                  <DropdownMenuTrigger render={<Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" />}>
+                    <span className="sr-only">Open menu</span>
+                    <MoreHorizontal size={16} />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
