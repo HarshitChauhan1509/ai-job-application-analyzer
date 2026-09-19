@@ -4,13 +4,15 @@ import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, File, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { uploadResumeAction } from "@/app/actions/resume";
 
 interface FileUploaderProps {
+  userId: string;
   onUploadComplete?: (file: File) => void;
   onCancel?: () => void;
 }
 
-export function FileUploader({ onUploadComplete, onCancel }: FileUploaderProps) {
+export function FileUploader({ userId, onUploadComplete, onCancel }: FileUploaderProps) {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -64,26 +66,40 @@ export function FileUploader({ onUploadComplete, onCancel }: FileUploaderProps) 
     }
   };
 
-  const simulateUpload = () => {
-    if (!file) return;
+  const handleUpload = async () => {
+    if (!file || !userId) return;
     
     setIsUploading(true);
-    setUploadProgress(0);
+    setUploadProgress(10);
+    setError(null);
     
-    // Simulate upload progress
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            setIsUploading(false);
-            if (onUploadComplete) onUploadComplete(file);
-          }, 500);
-          return 100;
-        }
-        return prev + 10;
-      });
-    }, 200);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("userId", userId);
+      
+      // Simulate progress for UI feel
+      const interval = setInterval(() => {
+        setUploadProgress((prev) => Math.min(prev + 10, 90));
+      }, 300);
+
+      const result = await uploadResumeAction(formData);
+      clearInterval(interval);
+      
+      if (result.success) {
+        setUploadProgress(100);
+        setTimeout(() => {
+          setIsUploading(false);
+          if (onUploadComplete) onUploadComplete(file);
+        }, 500);
+      } else {
+        throw new Error(result.error || "Failed to upload");
+      }
+    } catch (err: any) {
+      setError(err.message || "An error occurred during upload.");
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
   };
 
   return (
@@ -164,7 +180,7 @@ export function FileUploader({ onUploadComplete, onCancel }: FileUploaderProps) 
             <Button variant="outline" onClick={onCancel} disabled={isUploading}>
               Cancel
             </Button>
-            <Button onClick={simulateUpload} disabled={isUploading}>
+            <Button onClick={handleUpload} disabled={isUploading}>
               {isUploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
