@@ -9,13 +9,19 @@ import { revalidatePath } from "next/cache";
  * In a real implementation, we'd take FormData, upload to Supabase here,
  * then store the record.
  */
-export async function createResumeAction(
-  userId: string, 
-  fileBuffer: Buffer, 
-  fileName: string, 
-  contentType: string
-) {
+export async function uploadResumeAction(formData: FormData) {
   try {
+    const file = formData.get("file") as File;
+    const userId = formData.get("userId") as string;
+    
+    if (!file || !userId) {
+      return { success: false, error: "File and userId are required" };
+    }
+
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    const fileName = file.name;
+    const contentType = file.type;
+
     // 1. Upload to storage
     const path = `${userId}/${Date.now()}-${fileName.replace(/\s+/g, '-')}`;
     const { url } = await storage.uploadFile(path, fileBuffer, contentType);
