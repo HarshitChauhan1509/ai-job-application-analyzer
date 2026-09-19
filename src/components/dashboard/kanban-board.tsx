@@ -31,27 +31,46 @@ type BoardData = {
   columnOrder: string[];
 };
 
-const initialData: BoardData = {
-  applications: {
-    "app-1": { id: "app-1", company: "Google", position: "Senior Frontend Engineer", location: "Remote", match: 91, date: "2 days ago", status: "INTERVIEW" },
-    "app-2": { id: "app-2", company: "Linear", position: "Product Engineer", location: "San Francisco", match: 88, date: "4 days ago", status: "APPLIED" },
-    "app-3": { id: "app-3", company: "Vercel", position: "Software Engineer", location: "Remote", match: 82, date: "1 week ago", status: "SCREENING" },
-    "app-4": { id: "app-4", company: "Stripe", position: "Frontend Developer", location: "New York", match: 75, date: "2 weeks ago", status: "REJECTED" },
-    "app-5": { id: "app-5", company: "Meta", position: "UI Engineer", location: "Menlo Park", match: 85, date: "3 days ago", status: "SAVED" },
-  },
-  columns: {
-    "SAVED": { id: "SAVED", title: "Saved", applicationIds: ["app-5"] },
-    "APPLIED": { id: "APPLIED", title: "Applied", applicationIds: ["app-2"] },
-    "SCREENING": { id: "SCREENING", title: "Screening", applicationIds: ["app-3"] },
-    "INTERVIEW": { id: "INTERVIEW", title: "Interview", applicationIds: ["app-1"] },
-    "OFFER": { id: "OFFER", title: "Offer", applicationIds: [] },
-    "REJECTED": { id: "REJECTED", title: "Rejected", applicationIds: ["app-4"] },
-  },
-  columnOrder: ["SAVED", "APPLIED", "SCREENING", "INTERVIEW", "OFFER", "REJECTED"],
+const DEFAULT_COLUMNS = {
+  "SAVED": { id: "SAVED", title: "Saved", applicationIds: [] },
+  "APPLIED": { id: "APPLIED", title: "Applied", applicationIds: [] },
+  "SCREENING": { id: "SCREENING", title: "Screening", applicationIds: [] },
+  "INTERVIEW": { id: "INTERVIEW", title: "Interview", applicationIds: [] },
+  "OFFER": { id: "OFFER", title: "Offer", applicationIds: [] },
+  "REJECTED": { id: "REJECTED", title: "Rejected", applicationIds: [] },
 };
+const COLUMN_ORDER = ["SAVED", "APPLIED", "SCREENING", "INTERVIEW", "OFFER", "REJECTED"];
 
-export function KanbanBoard() {
-  const [data, setData] = useState<BoardData>(initialData);
+export function KanbanBoard({ initialApplications = [] }: { initialApplications?: any[] }) {
+  const [data, setData] = useState<BoardData>(() => {
+    const apps: Record<string, Application> = {};
+    const cols = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
+    
+    initialApplications.forEach(app => {
+      const match = app.job?.analysis ? 85 : 0; // Or whatever calculation
+      apps[app.id] = {
+        id: app.id,
+        company: app.job?.company || "Unknown",
+        position: app.job?.position || "Unknown",
+        location: app.job?.location || "Remote",
+        match,
+        date: new Date(app.updatedAt).toLocaleDateString(),
+        status: app.status || "SAVED"
+      };
+      
+      const status = app.status || "SAVED";
+      if (cols[status]) {
+        cols[status].applicationIds.push(app.id);
+      }
+    });
+
+    return {
+      applications: apps,
+      columns: cols,
+      columnOrder: COLUMN_ORDER
+    };
+  });
+  
   const [isMounted, setIsMounted] = useState(false);
 
   // Fix hydration issues with react-beautiful-dnd
