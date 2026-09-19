@@ -1,10 +1,13 @@
 import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { createClient } from "@libsql/client";
+import { PrismaLibSQL } from "@prisma/adapter-libsql";
+import path from "path";
 
-const connectionString = process.env.DATABASE_URL || "postgresql://johndoe:randompassword@localhost:5432/mydb?schema=public";
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
+// Initialize the SQLite adapter via libSQL
+const libsql = createClient({
+  url: process.env.DATABASE_URL || `file:${path.join(process.cwd(), "dev.db")}`,
+});
+const adapter = new PrismaLibSQL(libsql);
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
