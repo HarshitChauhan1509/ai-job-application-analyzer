@@ -1,11 +1,36 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Loader2, AlertCircle } from "lucide-react";
+import { loginUserAction } from "@/app/actions/auth";
+import { useState } from "react";
+import { useFormStatus } from "react-dom";
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="w-full group" disabled={pending}>
+      {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Sign In"}
+      {!pending && <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />}
+    </Button>
+  );
+}
 
 export default function LoginPage() {
+  const [error, setError] = useState<string | null>(null);
+
+  async function action(formData: FormData) {
+    setError(null);
+    const result = await loginUserAction(formData);
+    if (result?.error) {
+      setError(result.error);
+    }
+  }
+
   return (
     <Card className="border-border/50 shadow-xl shadow-black/5">
       <CardHeader className="space-y-1 pb-6 text-center">
@@ -16,7 +41,7 @@ export default function LoginPage() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <Button variant="outline" className="w-full relative bg-background">
+          <Button variant="outline" className="w-full relative bg-background" type="button">
             <svg viewBox="0 0 24 24" className="w-5 h-5 mr-2 absolute left-4" aria-hidden="true">
               <path d="M12.0003 4.75C13.7703 4.75 15.3553 5.36002 16.6053 6.54998L20.0303 3.125C17.9502 1.19 15.2353 0 12.0003 0C7.31028 0 3.25527 2.69 1.28027 6.60998L5.27028 9.70498C6.21525 6.86002 8.87028 4.75 12.0003 4.75Z" fill="#EA4335" />
               <path d="M23.49 12.275C23.49 11.49 23.415 10.73 23.3 10H12V14.51H18.47C18.18 15.99 17.34 17.25 16.08 18.1L19.945 21.1C22.2 19.01 23.49 15.92 23.49 12.275Z" fill="#4285F4" />
@@ -34,10 +59,16 @@ export default function LoginPage() {
             <span className="bg-card px-2 text-muted-foreground">Or continue with</span>
           </div>
         </div>
-        <form className="space-y-4">
+        <form action={action} className="space-y-4">
+          {error && (
+            <div className="p-3 text-sm bg-destructive/15 text-destructive rounded-md flex items-center gap-2">
+              <AlertCircle size={16} />
+              {error}
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="m@example.com" required />
+            <Input id="email" name="email" type="email" placeholder="m@example.com" required />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -46,12 +77,9 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
-            <Input id="password" type="password" required />
+            <Input id="password" name="password" type="password" placeholder="••••••••" required />
           </div>
-          <Button type="button" className="w-full group">
-            Sign In
-            <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-          </Button>
+          <SubmitButton />
         </form>
       </CardContent>
       <CardFooter className="flex flex-col">
