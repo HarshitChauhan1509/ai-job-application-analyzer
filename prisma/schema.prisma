@@ -3,13 +3,14 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
 }
 
 model User {
   id            String    @id @default(cuid())
   name          String?
   email         String?   @unique
+  password      String?
   emailVerified DateTime?
   image         String?
   createdAt     DateTime  @default(now())
@@ -60,10 +61,10 @@ model ResumeAnalysis {
   atsScore        Int
   skillsScore     Int
   experienceScore Int
-  strengths       String[] // Stored as JSON array or string array
-  weaknesses      String[]
-  missingKeywords String[]
-  recommendations String[]
+  strengths       String // Stored as JSON string array
+  weaknesses      String // Stored as JSON string array
+  missingKeywords String // Stored as JSON string array
+  recommendations String // Stored as JSON string array
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }
@@ -74,7 +75,7 @@ model Job {
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   company              String
   position             String
-  description          String   @db.Text
+  description          String
   url                  String?
   location             String?
   employmentType       String?
@@ -91,10 +92,10 @@ model JobAnalysis {
   id              String   @id @default(cuid())
   jobId           String   @unique
   job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  requiredSkills  String[]
-  preferredSkills String[]
-  responsibilities String[]
-  keywords        String[]
+  requiredSkills  String // JSON string array
+  preferredSkills String // JSON string array
+  responsibilities String // JSON string array
+  keywords        String // JSON string array
   seniority       String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -109,7 +110,7 @@ model Application {
   resumeId  String?
   resume    Resume?  @relation(fields: [resumeId], references: [id], onDelete: SetNull)
   status    String   @default("SAVED") // SAVED, APPLIED, SCREENING, INTERVIEW, OFFER, REJECTED
-  notes     String?  @db.Text
+  notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -121,7 +122,7 @@ model ApplicationEvent {
   applicationId String
   application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   type          String // e.g., STATUS_CHANGE, NOTE_ADDED, EMAIL_RECEIVED
-  description   String?     @db.Text
+  description   String?
   date          DateTime    @default(now())
   createdAt     DateTime    @default(now())
 }
@@ -136,10 +137,10 @@ model JobMatch {
   skillsScore      Int
   experienceScore  Int
   keywordsScore    Int
-  strongMatches    String[]
-  missingSkills    String[]
-  missingKeywords  String[]
-  recommendations  String[]
+  strongMatches    String // JSON string array
+  missingSkills    String // JSON string array
+  missingKeywords  String // JSON string array
+  recommendations  String // JSON string array
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -153,7 +154,7 @@ model InterviewSession {
   role          String
   difficulty    String
   overallScore  Float?
-  feedback      String?  @db.Text
+  feedback      String?
   completedAt   DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -165,7 +166,7 @@ model InterviewQuestion {
   id                 String           @id @default(cuid())
   interviewSessionId String
   interviewSession   InterviewSession @relation(fields: [interviewSessionId], references: [id], onDelete: Cascade)
-  question           String           @db.Text
+  question           String
   category           String
   orderIndex         Int
   createdAt          DateTime         @default(now())
@@ -177,9 +178,9 @@ model InterviewAnswer {
   id                  String            @id @default(cuid())
   interviewQuestionId String            @unique
   interviewQuestion   InterviewQuestion @relation(fields: [interviewQuestionId], references: [id], onDelete: Cascade)
-  answer              String            @db.Text
+  answer              String
   score               Float?
-  feedback            String?           @db.Text
+  feedback            String?
   createdAt           DateTime          @default(now())
 }
 
@@ -187,8 +188,8 @@ model AIConversation {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  context   String?  // e.g., "RESUME_IMPROVEMENT"
-  messages  Json     // Stored as JSON array of {role, content}
+  context   String?
+  messages  String   // Store JSON as string instead of Json type for SQLite compatibility
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -199,7 +200,7 @@ model Notification {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   message   String
-  type      String   // e.g., ANALYSIS_COMPLETE, INTERVIEW_REMINDER
+  type      String
   isRead    Boolean  @default(false)
   link      String?
   createdAt DateTime @default(now())
