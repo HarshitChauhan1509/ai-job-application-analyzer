@@ -1,64 +1,43 @@
-import { createClient } from '@supabase/supabase-js';
+import fs from "fs/promises";
+import path from "path";
 
-// Abstract Storage Interface
-// This ensures we can swap to S3 or another provider later without changing business logic
 export interface StorageProvider {
-  uploadFile(path: string, file: File | Buffer, contentType: string): Promise<{ url: string; path: string }>;
-  deleteFile(path: string): Promise<void>;
-  getFileUrl(path: string): string;
+  uploadFile(filePath: string, file: Buffer, contentType: string): Promise<{ url: string; path: string }>;
+  deleteFile(filePath: string): Promise<void>;
+  getFileUrl(filePath: string): string;
 }
 
-// Supabase Implementation
-class SupabaseStorage implements StorageProvider {
-  private client;
-  private bucket = 'resumes'; // Default bucket name
+class LocalStorage implements StorageProvider {
+  private uploadDir = path.join(process.cwd(), "public", "uploads");
 
   constructor() {
-    const supabaseUrl = process.env.SUPABASE_URL || '';
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
-    
-    // We initialize the client only if variables are present, 
-    // to avoid throwing errors during build/UI dev without a backend
-    this.client = supabaseUrl && supabaseKey 
-      ? createClient(supabaseUrl, supabaseKey) 
-      : null;
+    // Ensure the upload directory exists
+    fs.mkdir(this.uploadDir, { recursive: true }).catch(console.error);
   }
 
-  async uploadFile(path: string, file: File | Buffer, contentType: string): Promise<{ url: string; path: string }> {
-    if (!this.client) throw new Error("Storage provider not configured");
-
-    const { data, error } = await this.client.storage
-      .from(this.bucket)
-      .upload(path, file, {
-        contentType,
-        upsert: true,
-      });
-
-    if (error) {
-      throw new Error(`Failed to upload file: ${error.message}`);
-    }
-
-    const url = this.getFileUrl(data.path);
-    return { url, path: data.path };
+  async uploadFile(filePath: string, file: Buffer, contentType: string): Promise<{ url: string; path: string }> {
+    const fullPath = path.join(this.uploadDir, filePath);
+    const dir = path.dirname(fullPath);
+    
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(fullPath, file);
+    
+    const url = `/uploads/${filePath}`;
+    return { url, path: filePath };
   }
 
-  async deleteFile(path: string): Promise<void> {
-    if (!this.client) throw new Error("Storage provider not configured");
-
-    const { error } = await this.client.storage.from(this.bucket).remove([path]);
-    
-    if (error) {
-      throw new Error(`Failed to delete file: ${error.message}`);
+  async deleteFile(filePath: string): Promise<void> {
+    try {
+      const fullPath = path.join(this.uploadDir, filePath);
+      await fs.unlink(fullPath);
+    } catch (error) {
+      console.error(`Failed to delete file ${filePath}:`, error);
     }
   }
 
-  getFileUrl(path: string): string {
-    if (!this.client) return "";
-    
-    const { data } = this.client.storage.from(this.bucket).getPublicUrl(path);
-    return data.publicUrl;
+  getFileUrl(filePath: string): string {
+    return `/uploads/${filePath}`;
   }
 }
 
-// Export a singleton instance
-export const storage: StorageProvider = new SupabaseStorage();
+export const storage: StorageProvider = new LocalStorage();
