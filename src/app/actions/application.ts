@@ -1,7 +1,51 @@
 "use server";
 
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+
+export async function createApplicationAction(jobId: string) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    const existing = await prisma.application.findFirst({
+      where: { userId: user.id, jobId }
+    });
+
+    if (existing) {
+      return { success: false, error: "Application already tracking this job" };
+    }
+
+    const application = await prisma.application.create({
+      data: {
+        userId: user.id,
+        jobId,
+        status: "SAVED"
+      }
+    });
+
+    // Create an initial event
+    await prisma.applicationEvent.create({
+      data: {
+        applicationId: application.id,
+        type: "CREATED",
+        description: "Application tracking started",
+      },
+    });
+
+    revalidatePath("/applications");
+    revalidatePath("/dashboard");
+    revalidatePath("/jobs");
+    
+    return { success: true, application };
+  } catch (error) {
+    console.error("Error creating application:", error);
+    return { success: false, error: "Failed to create application" };
+  }
+}
 
 export async function updateApplicationStatusAction(applicationId: string, newStatus: string) {
   try {
@@ -10,7 +54,6 @@ export async function updateApplicationStatusAction(applicationId: string, newSt
       data: { status: newStatus },
     });
 
-    // Create an event for the timeline
     await prisma.applicationEvent.create({
       data: {
         applicationId,
@@ -19,7 +62,7 @@ export async function updateApplicationStatusAction(applicationId: string, newSt
       },
     });
 
-    revalidatePath("/dashboard/applications");
+    revalidatePath("/applications");
     revalidatePath(`/dashboard/applications/${applicationId}`);
     
     return { success: true, application };
