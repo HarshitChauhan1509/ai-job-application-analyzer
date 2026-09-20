@@ -4,13 +4,41 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { MoreHorizontal, Bookmark, MapPin, Building, Briefcase, Plus } from "lucide-react";
+import { MoreHorizontal, Bookmark, MapPin, Building, Briefcase, Plus, Loader2 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { createAndAnalyzeJobAction } from "@/app/actions/job";
+import { useToast } from "@/hooks/use-toast";
 
 // Removed mock data
 
 export default function JobsClient({ initialJobs, userId }: { initialJobs: any[], userId: string }) {
   const [isAdding, setIsAdding] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [jobDescription, setJobDescription] = useState("");
+  const { toast } = useToast();
+
+  const handleAnalyzeJob = async () => {
+    if (!jobDescription.trim()) {
+      toast({ title: "Error", description: "Please enter a job description.", variant: "destructive" });
+      return;
+    }
+    
+    setIsAnalyzing(true);
+    try {
+      const result = await createAndAnalyzeJobAction(jobDescription);
+      if (result.success) {
+        toast({ title: "Success", description: "Job analyzed and saved successfully." });
+        setJobDescription("");
+        setIsAdding(false);
+      } else {
+        toast({ title: "Error", description: result.error || "Failed to analyze job.", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -19,7 +47,7 @@ export default function JobsClient({ initialJobs, userId }: { initialJobs: any[]
           <h1 className="text-3xl font-bold tracking-tight">Saved Jobs</h1>
           <p className="text-muted-foreground mt-1">Manage job descriptions and analyze your fit.</p>
         </div>
-        <Button onClick={() => setIsAdding(!isAdding)} className="w-full sm:w-auto">
+        <Button onClick={() => setIsAdding(!isAdding)} className="w-full sm:w-auto" disabled={isAdding || isAnalyzing}>
           <Plus className="mr-2 h-4 w-4" />
           Add Job Description
         </Button>
@@ -36,10 +64,16 @@ export default function JobsClient({ initialJobs, userId }: { initialJobs: any[]
               <textarea 
                 className="w-full min-h-[200px] p-4 rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y" 
                 placeholder="Paste the full job description here..."
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+                disabled={isAnalyzing}
               />
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAdding(false)}>Cancel</Button>
-                <Button>Analyze Job</Button>
+                <Button variant="outline" onClick={() => setIsAdding(false)} disabled={isAnalyzing}>Cancel</Button>
+                <Button onClick={handleAnalyzeJob} disabled={isAnalyzing}>
+                  {isAnalyzing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isAnalyzing ? "Analyzing..." : "Analyze Job"}
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -116,7 +150,21 @@ export default function JobsClient({ initialJobs, userId }: { initialJobs: any[]
                   )}
                 </CardContent>
                 <CardFooter className="pt-0 flex gap-2 mt-auto">
-                  <Button variant="default" className="w-full">Track Application</Button>
+                  <Button 
+                    variant="default" 
+                    className="w-full"
+                    onClick={async () => {
+                      const { createApplicationAction } = await import('@/app/actions/application');
+                      const res = await createApplicationAction(job.id);
+                      if (res.success) {
+                        toast({ title: "Success", description: "Application tracked!" });
+                      } else {
+                        toast({ title: "Error", description: res.error, variant: "destructive" });
+                      }
+                    }}
+                  >
+                    Track Application
+                  </Button>
                 </CardFooter>
               </Card>
             );
