@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FileText, Briefcase, KanbanSquare, MessageSquare, ArrowRight, Zap, TrendingUp, AlertCircle } from "lucide-react";
@@ -109,15 +110,32 @@ export default function DashboardClient({ stats, recentApplications }: { stats: 
               </Link>
             </CardHeader>
             <CardContent>
-                          <span className="text-xs font-medium">{app.match}%</span>
+              <div className="space-y-4 mt-4">
+                {recentApplications.length === 0 ? (
+                  <div className="text-sm text-muted-foreground text-center py-4">No recent applications</div>
+                ) : (
+                  recentApplications.map((app) => (
+                    <div key={app.id} className="flex items-center justify-between border-b border-border/50 pb-4 last:border-0 last:pb-0">
+                      <div className="flex gap-3 items-center">
+                        <div className="w-10 h-10 rounded-md bg-muted flex items-center justify-center font-bold text-sm uppercase">
+                          {app.job?.company?.charAt(0) || "U"}
+                        </div>
+                        <div>
+                          <div className="font-semibold text-sm">{app.job?.position || "Unknown Role"}</div>
+                          <div className="text-xs text-muted-foreground">{app.job?.company || "Unknown Company"}</div>
                         </div>
                       </div>
-                      <Badge variant="secondary" className={`${app.color} border-0 rounded-full px-2.5 font-medium`}>
-                        {app.status}
-                      </Badge>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-semibold">
+                          {app.status}
+                        </Badge>
+                        <div className="text-[10px] text-muted-foreground">
+                          {new Date(app.updatedAt).toLocaleDateString()}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
