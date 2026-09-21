@@ -13,10 +13,24 @@ export async function processResumeAction(resumeId: string, resumeText: string) 
       where: { resumeId },
       create: {
         resumeId,
-        ...analysisResult,
+        overallScore: analysisResult.overallScore,
+        atsScore: analysisResult.atsScore,
+        skillsScore: analysisResult.skillsScore,
+        experienceScore: analysisResult.experienceScore,
+        strengths: JSON.stringify(analysisResult.strengths),
+        weaknesses: JSON.stringify(analysisResult.weaknesses),
+        missingKeywords: JSON.stringify(analysisResult.missingKeywords),
+        recommendations: JSON.stringify(analysisResult.recommendations),
       },
       update: {
-        ...analysisResult,
+        overallScore: analysisResult.overallScore,
+        atsScore: analysisResult.atsScore,
+        skillsScore: analysisResult.skillsScore,
+        experienceScore: analysisResult.experienceScore,
+        strengths: JSON.stringify(analysisResult.strengths),
+        weaknesses: JSON.stringify(analysisResult.weaknesses),
+        missingKeywords: JSON.stringify(analysisResult.missingKeywords),
+        recommendations: JSON.stringify(analysisResult.recommendations),
       }
     });
 
@@ -38,10 +52,16 @@ export async function processJobAction(jobId: string, jobDescriptionText: string
       where: { jobId },
       create: {
         jobId,
-        ...analysisResult,
+        requiredSkills: JSON.stringify(analysisResult.requiredSkills),
+        preferredSkills: JSON.stringify(analysisResult.preferredSkills),
+        responsibilities: JSON.stringify(analysisResult.responsibilities),
+        keywords: JSON.stringify(analysisResult.keywords),
       },
       update: {
-        ...analysisResult,
+        requiredSkills: JSON.stringify(analysisResult.requiredSkills),
+        preferredSkills: JSON.stringify(analysisResult.preferredSkills),
+        responsibilities: JSON.stringify(analysisResult.responsibilities),
+        keywords: JSON.stringify(analysisResult.keywords),
       }
     });
 
@@ -71,10 +91,24 @@ export async function matchJobAction(resumeId: string, jobId: string, resumeText
       create: {
         resumeId,
         jobId,
-        ...matchResult,
+        overallScore: matchResult.overallScore,
+        skillsScore: matchResult.skillsScore,
+        experienceScore: matchResult.experienceScore,
+        keywordsScore: matchResult.keywordsScore,
+        strongMatches: JSON.stringify(matchResult.strongMatches),
+        missingSkills: JSON.stringify(matchResult.missingSkills),
+        missingKeywords: JSON.stringify(matchResult.missingKeywords),
+        recommendations: JSON.stringify(matchResult.recommendations),
       },
       update: {
-        ...matchResult,
+        overallScore: matchResult.overallScore,
+        skillsScore: matchResult.skillsScore,
+        experienceScore: matchResult.experienceScore,
+        keywordsScore: matchResult.keywordsScore,
+        strongMatches: JSON.stringify(matchResult.strongMatches),
+        missingSkills: JSON.stringify(matchResult.missingSkills),
+        missingKeywords: JSON.stringify(matchResult.missingKeywords),
+        recommendations: JSON.stringify(matchResult.recommendations),
       }
     });
 
