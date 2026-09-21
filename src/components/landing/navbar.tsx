@@ -13,6 +13,7 @@ export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     const handleScroll = () => {
       setScrolled(window.scrollY > 50);
