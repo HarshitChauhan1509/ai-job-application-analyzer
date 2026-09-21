@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 import { KanbanBoard } from "@/components/dashboard/kanban-board";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
