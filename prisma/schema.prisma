@@ -3,7 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  // provider = "sqlite"
+  provider = "postgresql"
 }
 
 model User {
@@ -70,18 +71,18 @@ model ResumeAnalysis {
 }
 
 model Job {
-  id                   String   @id @default(cuid())
-  userId               String
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  company              String
-  position             String
-  description          String
-  url                  String?
-  location             String?
-  employmentType       String?
+  id                    String   @id @default(cuid())
+  userId                String
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  company               String
+  position              String
+  description           String
+  url                   String?
+  location              String?
+  employmentType        String?
   experienceRequirement String?
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   analysis     JobAnalysis?
   applications Application[]
@@ -89,16 +90,16 @@ model Job {
 }
 
 model JobAnalysis {
-  id              String   @id @default(cuid())
-  jobId           String   @unique
-  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  requiredSkills  String // JSON string array
-  preferredSkills String // JSON string array
+  id               String   @id @default(cuid())
+  jobId            String   @unique
+  job              Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  requiredSkills   String // JSON string array
+  preferredSkills  String // JSON string array
   responsibilities String // JSON string array
-  keywords        String // JSON string array
-  seniority       String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  keywords         String // JSON string array
+  seniority        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Application {
@@ -128,36 +129,36 @@ model ApplicationEvent {
 }
 
 model JobMatch {
-  id               String   @id @default(cuid())
-  resumeId         String
-  resume           Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  jobId            String
-  job              Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  overallScore     Int
-  skillsScore      Int
-  experienceScore  Int
-  keywordsScore    Int
-  strongMatches    String // JSON string array
-  missingSkills    String // JSON string array
-  missingKeywords  String // JSON string array
-  recommendations  String // JSON string array
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String   @id @default(cuid())
+  resumeId        String
+  resume          Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobId           String
+  job             Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  overallScore    Int
+  skillsScore     Int
+  experienceScore Int
+  keywordsScore   Int
+  strongMatches   String // JSON string array
+  missingSkills   String // JSON string array
+  missingKeywords String // JSON string array
+  recommendations String // JSON string array
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([resumeId, jobId])
 }
 
 model InterviewSession {
-  id            String   @id @default(cuid())
-  userId        String
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role          String
-  difficulty    String
-  overallScore  Float?
-  feedback      String?
-  completedAt   DateTime?
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String    @id @default(cuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role         String
+  difficulty   String
+  overallScore Float?
+  feedback     String?
+  completedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   questions InterviewQuestion[]
 }
@@ -189,7 +190,7 @@ model AIConversation {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   context   String?
-  messages  String   // Store JSON as string instead of Json type for SQLite compatibility
+  messages  String // Store JSON as string instead of Json type for SQLite compatibility
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
