@@ -1,10 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaLibSql } from "@prisma/adapter-libsql";
+import { PrismaPg } from "@prisma/adapter-pg";
 import path from "path";
 
-// Initialize the SQLite adapter via libSQL
+// Initialize the database adapter dynamically based on DATABASE_URL
 const dbUrl = process.env.DATABASE_URL || `file:${path.join(process.cwd(), "dev.db")}`;
-const adapter = new PrismaLibSql({ url: dbUrl });
+const isPostgres = dbUrl.startsWith("postgres://") || dbUrl.startsWith("postgresql://");
+
+const adapter: any = isPostgres
+  ? new PrismaPg(dbUrl)
+  : new PrismaLibSql({ url: dbUrl });
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
