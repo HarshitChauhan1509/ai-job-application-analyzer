@@ -62,8 +62,54 @@ export async function registerUserAction(formData: FormData) {
   redirect("/dashboard");
 }
 
+export async function loginWithGoogleAction() {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (
+    clientId &&
+    clientSecret &&
+    clientId !== "your-google-client-id" &&
+    clientSecret !== "your-google-client-secret"
+  ) {
+    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+    const redirectUri = `${baseUrl}/api/auth/callback/google`;
+    const googleAuthUrl = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${encodeURIComponent(
+      clientId
+    )}&redirect_uri=${encodeURIComponent(
+      redirectUri
+    )}&response_type=code&scope=${encodeURIComponent(
+      "openid email profile"
+    )}&access_type=offline&prompt=consent`;
+
+    redirect(googleAuthUrl);
+  }
+
+  // Fallback for local development/portfolio demo: instant Google user sign-in
+  const demoEmail = "alex.morgan@gmail.com";
+  let user = await prisma.user.findUnique({
+    where: { email: demoEmail },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        name: "Alex Morgan",
+        email: demoEmail,
+        image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&h=100&fit=crop&crop=faces",
+        emailVerified: new Date(),
+      },
+    });
+  }
+
+  await setSession(user.id);
+  revalidatePath("/", "layout");
+  redirect("/dashboard");
+}
+
 export async function logoutUserAction() {
   await clearSession();
   revalidatePath("/", "layout");
   redirect("/login");
 }
+
