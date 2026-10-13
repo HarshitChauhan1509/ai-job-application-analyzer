@@ -14,6 +14,7 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { logoutUserAction } from "@/app/actions/auth";
 
 const navItems = [
