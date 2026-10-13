@@ -63,7 +63,7 @@ export async function updateApplicationStatusAction(applicationId: string, newSt
     });
 
     revalidatePath("/applications");
-    revalidatePath(`/dashboard/applications/${applicationId}`);
+    revalidatePath(`/applications/${applicationId}`);
     
     return { success: true, application };
   } catch (error) {
@@ -82,10 +82,71 @@ export async function addApplicationNoteAction(applicationId: string, note: stri
       },
     });
 
-    revalidatePath(`/dashboard/applications/${applicationId}`);
+    revalidatePath("/applications");
+    revalidatePath(`/applications/${applicationId}`);
     return { success: true };
   } catch (error) {
     console.error("Error adding application note:", error);
     return { success: false, error: "Failed to add note" };
   }
 }
+
+export async function quickCreateApplicationAction(data: {
+  company: string;
+  position: string;
+  location?: string;
+  status?: string;
+  notes?: string;
+}) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  const { company, position, location, status = "SAVED", notes } = data;
+  if (!company.trim() || !position.trim()) {
+    return { success: false, error: "Company and position are required" };
+  }
+
+  try {
+    // 1. Create or find job
+    const job = await prisma.job.create({
+      data: {
+        userId: user.id,
+        company: company.trim(),
+        position: position.trim(),
+        location: location?.trim() || null,
+        description: `Tracked application for ${position} at ${company}`,
+      },
+    });
+
+    // 2. Create Application
+    const application = await prisma.application.create({
+      data: {
+        userId: user.id,
+        jobId: job.id,
+        status: status || "SAVED",
+        notes: notes?.trim() || null,
+      },
+    });
+
+    // 3. Log initial tracking event
+    await prisma.applicationEvent.create({
+      data: {
+        applicationId: application.id,
+        type: "CREATED",
+        description: `Application created with status: ${status || "SAVED"}`,
+      },
+    });
+
+    revalidatePath("/dashboard");
+    revalidatePath("/applications");
+    revalidatePath("/jobs");
+
+    return { success: true, application };
+  } catch (error: any) {
+    console.error("Error in quickCreateApplicationAction:", error);
+    return { success: false, error: error.message || "Failed to create application" };
+  }
+}
+
