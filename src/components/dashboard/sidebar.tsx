@@ -14,15 +14,15 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { logoutUserAction } from "@/app/actions/auth";
 
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-  { name: "Resumes", href: "/dashboard/resumes", icon: FileText },
-  { name: "Jobs", href: "/dashboard/jobs", icon: Bookmark },
-  { name: "Applications", href: "/dashboard/applications", icon: KanbanSquare },
-  { name: "Interviews", href: "/dashboard/interviews", icon: MessageSquare },
-  { name: "AI Coach", href: "/dashboard/coach", icon: Sparkles },
+  { name: "Resumes", href: "/resumes", icon: FileText },
+  { name: "Jobs", href: "/jobs", icon: Bookmark },
+  { name: "Applications", href: "/applications", icon: KanbanSquare },
+  { name: "AI Coach", href: "/coach", icon: MessageSquare },
+  { name: "Resume Improver", href: "/improve", icon: Sparkles },
 ];
 
 export function Sidebar() {
@@ -39,7 +39,7 @@ export function Sidebar() {
 
       <nav className="flex-1 space-y-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
           return (
             <Link
               key={item.name}
@@ -59,22 +59,16 @@ export function Sidebar() {
       </nav>
 
       <div className="mt-auto pt-6 space-y-1 border-t border-border">
-        <Link
-          href="/dashboard/settings"
-          className={cn(
-            "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-            pathname === "/dashboard/settings"
-              ? "bg-primary/10 text-primary"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          )}
-        >
-          <Settings size={18} />
-          Settings
-        </Link>
-        <Button variant="ghost" className="w-full justify-start gap-3 px-3 py-2 text-muted-foreground hover:text-foreground">
-          <LogOut size={18} />
-          Sign out
-        </Button>
+        <form action={logoutUserAction}>
+          <Button
+            type="submit"
+            variant="ghost"
+            className="w-full justify-start gap-3 px-3 py-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+          >
+            <LogOut size={18} />
+            Sign out
+          </Button>
+        </form>
       </div>
     </aside>
   );
