@@ -50,8 +50,8 @@ export async function createAndAnalyzeJobAction(descriptionText: string) {
     revalidatePath("/jobs");
     revalidatePath("/dashboard");
     return { success: true, job };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Failed to create and analyze job:", error);
-    return { success: false, error: "Failed to process job description" };
+    return { success: false, error: error?.message || "Failed to process job description" };
   }
 }
