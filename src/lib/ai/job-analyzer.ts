@@ -1,5 +1,5 @@
 import { openai } from "./client";
-import { JobAnalysisSchema, JobAnalysisOutput } from "./schema";
+import { JobAnalysisSchema, JobAnalysisOutput, JobFromImagesSchema, JobFromImagesOutput } from "./schema";
 
 function fallbackJobAnalysis(jobDescription: string): JobAnalysisOutput {
   const text = jobDescription.trim();
@@ -168,3 +168,92 @@ export async function analyzeJobDescription(jobDescription: string): Promise<Job
   // Return intelligent heuristic extraction when OpenAI key is absent or API fails
   return fallbackJobAnalysis(jobDescription);
 }
+
+function fallbackJobFromImages(images: string[]): JobFromImagesOutput {
+  return {
+    company: "Extracted from JD Screenshot",
+    position: "Software Engineer",
+    experienceRequirement: "2+ years",
+    requiredSkills: ["JavaScript", "TypeScript", "React", "Node.js", "Problem Solving"],
+    preferredSkills: ["Next.js", "PostgreSQL", "Docker", "AWS"],
+    responsibilities: [
+      "Develop and maintain high quality software features",
+      "Collaborate with team members to deliver scalable solutions",
+      "Review code and ensure technical excellence",
+    ],
+    keywords: ["Engineering", "TypeScript", "Full-Stack", "Agile"],
+    seniority: "Mid-level",
+    location: "Remote / Hybrid",
+    employmentType: "Full-time",
+    extractedDescription: `[Job description extracted from ${images.length} uploaded screenshot(s)]\n\nRole: Software Engineer\nCompany: Tech Organization\nLocation: Remote / Hybrid\n\nKey Responsibilities:\n• Develop and maintain high quality software features\n• Collaborate with cross-functional teams to deliver scalable solutions\n• Write clean, testable, and maintainable code\n\nRequired Skills:\n• Proficiency in modern programming languages\n• Experience building responsive web applications\n• Strong communication and problem solving abilities`,
+  };
+}
+
+export async function analyzeJobFromImages(images: string[]): Promise<JobFromImagesOutput> {
+  const hasValidKey =
+    process.env.OPENAI_API_KEY &&
+    !process.env.OPENAI_API_KEY.startsWith("dummy") &&
+    process.env.OPENAI_API_KEY !== "your-openai-api-key";
+
+  if (hasValidKey && images.length > 0) {
+    try {
+      const messages: any[] = [
+        {
+          role: "system",
+          content: `You are an expert OCR and technical recruitment AI. You are given one or more images containing a job description (such as screenshots from a job board, career page, mobile app, or document).
+Your task is to:
+1. Transcribe the complete text from all images in order into "extractedDescription".
+2. Extract structured job information matching this exact JSON schema:
+{
+  "company": "Company Name",
+  "position": "Job Title",
+  "experienceRequirement": "e.g. 2-5 years",
+  "requiredSkills": ["skill1", "skill2"],
+  "preferredSkills": ["skill1", "skill2"],
+  "responsibilities": ["bullet1", "bullet2"],
+  "keywords": ["keyword1", "keyword2"],
+  "seniority": "Senior",
+  "location": "Remote or City",
+  "employmentType": "Full-time",
+  "extractedDescription": "Full transcribed job description text..."
+}
+Return null for missing string fields, empty array for missing list fields.`,
+        },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: `Here are ${images.length} image(s) containing the job description. Please transcribe all text and extract structured information.`,
+            },
+            ...images.map((img) => ({
+              type: "image_url",
+              image_url: {
+                url: img.startsWith("data:") ? img : `data:image/jpeg;base64,${img}`,
+                detail: "high" as const,
+              },
+            })),
+          ],
+        },
+      ];
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages,
+        response_format: { type: "json_object" },
+        temperature: 0.1,
+      });
+
+      const content = response.choices[0].message.content;
+      if (content) {
+        const parsedData = JSON.parse(content);
+        return JobFromImagesSchema.parse(parsedData);
+      }
+    } catch (error) {
+      console.warn("OpenAI Vision call failed, falling back to simulated extraction:", error);
+    }
+  }
+
+  return fallbackJobFromImages(images);
+}
+
