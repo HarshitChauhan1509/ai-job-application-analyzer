@@ -29,6 +29,9 @@ import {
   X,
   LayoutGrid,
   List,
+  ImageIcon,
+  UploadCloud,
+  FileImage,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -46,7 +49,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { createAndAnalyzeJobAction, scrapeJobUrlAction, deleteJobAction } from "@/app/actions/job";
+import { createAndAnalyzeJobAction, scrapeJobUrlAction, deleteJobAction, analyzeJobImagesAction } from "@/app/actions/job";
 import { createApplicationAction } from "@/app/actions/application";
 import { useToast } from "@/hooks/use-toast";
 
@@ -114,6 +117,66 @@ function formatEmploymentType(val: string | null | undefined): string {
   return clean.charAt(0).toUpperCase() + clean.slice(1);
 }
 
+interface UploadedImageItem {
+  name: string;
+  size: number;
+  dataUrl: string;
+}
+
+async function processImageFile(file: File): Promise<UploadedImageItem> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        let width = img.width;
+        let height = img.height;
+        const maxDimension = 1600;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.88);
+          resolve({
+            name: file.name,
+            size: Math.round((dataUrl.length * 3) / 4),
+            dataUrl,
+          });
+        } else {
+          resolve({
+            name: file.name,
+            size: file.size,
+            dataUrl: e.target?.result as string,
+          });
+        }
+      };
+      img.onerror = () => {
+        resolve({
+          name: file.name,
+          size: file.size,
+          dataUrl: e.target?.result as string,
+        });
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 export default function JobsClient({
   initialJobs,
   userId,
@@ -123,7 +186,7 @@ export default function JobsClient({
 }) {
   const [jobs, setJobs] = useState<JobItem[]>(initialJobs);
   const [isAdding, setIsAdding] = useState(false);
-  const [addMode, setAddMode] = useState<"url" | "text">("url");
+  const [addMode, setAddMode] = useState<"url" | "image" | "text">("url");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Form states
@@ -134,6 +197,10 @@ export default function JobsClient({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [protectionNotice, setProtectionNotice] = useState<string | null>(null);
+
+  // Multiple image upload states
+  const [uploadedImages, setUploadedImages] = useState<UploadedImageItem[]>([]);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
 
   // Filter & Search states
   const [searchQuery, setSearchQuery] = useState("");
@@ -260,6 +327,84 @@ export default function JobsClient({
       toast({
         title: "Unexpected Error",
         description: "An error occurred while analyzing the job.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  // Handle image files selection and auto-processing
+  const handleImageFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const files = Array.from(e.target.files);
+    setIsProcessingImages(true);
+    try {
+      const processed = await Promise.all(files.map((file) => processImageFile(file)));
+      setUploadedImages((prev) => [...prev, ...processed]);
+      toast({
+        title: "Image(s) Loaded",
+        description: `${files.length} screenshot(s) ready for Vision AI extraction.`,
+      });
+    } catch {
+      toast({
+        title: "Upload Error",
+        description: "Failed to process one or more images. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessingImages(false);
+      if (e.target) e.target.value = "";
+    }
+  };
+
+  // Handle removing a single image
+  const handleRemoveImage = (index: number) => {
+    setUploadedImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle Vision AI job analysis from uploaded images
+  const handleAnalyzeFromImages = async () => {
+    if (uploadedImages.length === 0) {
+      toast({
+        title: "No images provided",
+        description: "Please upload at least one screenshot of the job description.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const res = await analyzeJobImagesAction({
+        images: uploadedImages.map((img) => img.dataUrl),
+        url: urlInput.trim() || undefined,
+        company: companyInput.trim() || undefined,
+        position: positionInput.trim() || undefined,
+      });
+
+      if (res.success && res.job) {
+        toast({
+          title: "Job Extracted & Saved!",
+          description: `${res.job.position} at ${res.job.company} analyzed successfully from ${uploadedImages.length} screenshot(s)!`,
+        });
+        setJobs((prev) => [res.job as any, ...prev]);
+        setUploadedImages([]);
+        setUrlInput("");
+        setCompanyInput("");
+        setPositionInput("");
+        setIsAdding(false);
+      } else {
+        toast({
+          title: "Vision Analysis Error",
+          description: res.error || "Failed to extract job details from images.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred while analyzing images.",
         variant: "destructive",
       });
     } finally {
@@ -395,8 +540,8 @@ export default function JobsClient({
                 </CardDescription>
               </div>
 
-              {/* Responsive Mode Toggle */}
-              <div className="w-full sm:w-auto grid grid-cols-2 p-1 rounded-lg bg-muted text-xs font-medium shrink-0">
+              {/* Responsive 3-Way Mode Toggle */}
+              <div className="w-full sm:w-auto grid grid-cols-3 p-1 rounded-lg bg-muted text-xs font-medium shrink-0">
                 <button
                   type="button"
                   onClick={() => setAddMode("url")}
@@ -406,8 +551,20 @@ export default function JobsClient({
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Link2 className="h-3.5 w-3.5" />
-                  Import from Link
+                  <Link2 className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Job Link</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddMode("image")}
+                  className={`px-3 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                    addMode === "image"
+                      ? "bg-background text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ImageIcon className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Screenshot(s)</span>
                 </button>
                 <button
                   type="button"
@@ -418,8 +575,8 @@ export default function JobsClient({
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  <Bookmark className="h-3.5 w-3.5" />
-                  Paste Text
+                  <Bookmark className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">Paste Text</span>
                 </button>
               </div>
             </div>
@@ -517,6 +674,169 @@ export default function JobsClient({
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Mode 2: Multi-Image Upload */}
+            {addMode === "image" && (
+              <div className="space-y-4">
+                {/* Drag and Drop / File Input Zone */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="jd-image-upload"
+                    className="flex flex-col items-center justify-center border-2 border-dashed border-primary/30 hover:border-primary/60 bg-muted/20 hover:bg-primary/5 transition-all rounded-xl p-6 sm:p-8 cursor-pointer text-center group"
+                  >
+                    <input
+                      id="jd-image-upload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleImageFilesSelected}
+                      disabled={isAnalyzing || isProcessingImages}
+                    />
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center text-primary group-hover:scale-105 transition-transform mb-3">
+                      {isProcessingImages ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                      ) : (
+                        <UploadCloud className="h-6 w-6 text-primary" />
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-foreground">
+                      {isProcessingImages
+                        ? "Optimizing screenshots..."
+                        : "Click to upload or drag & drop job screenshots"}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-sm">
+                      Upload one or multiple screenshots (PNG, JPG, WEBP). Perfect for mobile or desktop job postings (Indeed, LinkedIn, WhatsApp, email).
+                    </p>
+                  </label>
+                </div>
+
+                {/* Uploaded Images Preview List */}
+                {uploadedImages.length > 0 && (
+                  <div className="space-y-3 pt-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Uploaded Screenshots ({uploadedImages.length})
+                      </span>
+                      <label
+                        htmlFor="jd-image-upload-more"
+                        className="text-xs font-medium text-primary hover:underline cursor-pointer flex items-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add more images
+                        <input
+                          id="jd-image-upload-more"
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={handleImageFilesSelected}
+                          disabled={isAnalyzing || isProcessingImages}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {uploadedImages.map((img, idx) => (
+                        <div
+                          key={idx}
+                          className="relative group rounded-lg border border-border bg-card overflow-hidden shadow-2xs flex flex-col"
+                        >
+                          <div className="aspect-4/3 relative bg-muted/30 overflow-hidden flex items-center justify-center">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={img.dataUrl}
+                              alt={img.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                            />
+                            <div className="absolute top-1.5 left-1.5 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm backdrop-blur-xs">
+                              #{idx + 1}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(idx)}
+                              className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity shadow-sm"
+                              title="Remove image"
+                              disabled={isAnalyzing}
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <div className="p-2 text-[11px] truncate text-muted-foreground bg-muted/10 border-t border-border/50">
+                            <span className="font-medium text-foreground truncate block">{img.name}</span>
+                            <span>{Math.round(img.size / 1024)} KB</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Optional Metadata */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Original Posting URL (Optional)
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="e.g. https://in.indeed.com/..."
+                      value={urlInput}
+                      onChange={(e) => setUrlInput(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      disabled={isAnalyzing}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Company Name (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Auto-detected by Vision AI if empty"
+                      value={companyInput}
+                      onChange={(e) => setCompanyInput(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      disabled={isAnalyzing}
+                    />
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2 border-t border-border/40">
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={() => {
+                      setUploadedImages([]);
+                      setIsAdding(false);
+                    }}
+                    disabled={isAnalyzing}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="w-full sm:w-auto"
+                    onClick={handleAnalyzeFromImages}
+                    disabled={isAnalyzing || uploadedImages.length === 0}
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Extracting & Analyzing with Vision AI...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        {uploadedImages.length > 0
+                          ? `Extract & Analyze (${uploadedImages.length} Image${uploadedImages.length > 1 ? "s" : ""})`
+                          : "Upload Screenshot(s) First"}
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             )}
 
