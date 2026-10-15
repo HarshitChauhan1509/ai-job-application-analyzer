@@ -27,6 +27,8 @@ import {
   ListChecks,
   Layers,
   X,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -102,6 +104,16 @@ function getHostName(urlString: string | null | undefined): string {
   }
 }
 
+function formatEmploymentType(val: string | null | undefined): string {
+  if (!val) return "Full-Time";
+  const clean = val.replace(/_/g, " ").toLowerCase();
+  if (clean.includes("full")) return "Full-Time";
+  if (clean.includes("part")) return "Part-Time";
+  if (clean.includes("contract")) return "Contract";
+  if (clean.includes("intern")) return "Internship";
+  return clean.charAt(0).toUpperCase() + clean.slice(1);
+}
+
 export default function JobsClient({
   initialJobs,
   userId,
@@ -112,6 +124,7 @@ export default function JobsClient({
   const [jobs, setJobs] = useState<JobItem[]>(initialJobs);
   const [isAdding, setIsAdding] = useState(false);
   const [addMode, setAddMode] = useState<"url" | "text">("url");
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   // Form states
   const [urlInput, setUrlInput] = useState("");
@@ -337,9 +350,9 @@ export default function JobsClient({
   const unappliedCount = jobs.length - pipelineCount;
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-4 md:px-6 pb-16">
+    <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-4 md:px-6 py-4 pb-20">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
         <div className="space-y-1">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Saved Jobs & Target Roles</h1>
           <p className="text-sm text-muted-foreground">
@@ -424,7 +437,7 @@ export default function JobsClient({
                       <Link2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <input
                         type="url"
-                        placeholder="e.g. https://in.indeed.com/viewjob?jk=6458112800546282 or Greenhouse / Lever / career link"
+                        placeholder="e.g. https://in.indeed.com/viewjob?jk=6458112800546282 or Greenhouse / Lever link"
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
                         className="w-full pl-9 pr-4 py-2.5 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
@@ -623,53 +636,76 @@ export default function JobsClient({
           </button>
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            type="text"
-            placeholder="Search by role, company, location..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
-          />
+        {/* Search Input & View Switcher */}
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 md:w-80">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by role, company, location..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+
+          <div className="flex items-center p-1 rounded-lg bg-muted text-xs">
+            <button
+              type="button"
+              onClick={() => setViewMode("grid")}
+              title="Grid View"
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === "grid"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              title="List View"
+              className={`p-1.5 rounded-md transition-all ${
+                viewMode === "list"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <List className="h-4 w-4" />
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Jobs Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {filteredJobs.length === 0 ? (
-          <div className="col-span-full py-16 text-center text-muted-foreground border-2 border-dashed rounded-2xl bg-card/40 px-4">
-            <Briefcase className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
-            <h3 className="text-base sm:text-lg font-medium text-foreground">No jobs found</h3>
-            <p className="text-xs sm:text-sm mt-1 max-w-sm mx-auto text-muted-foreground">
-              {searchQuery
-                ? "No saved jobs match your current search query."
-                : "Add a job posting link or paste a job description to get started!"}
-            </p>
-            {!searchQuery && (
-              <Button
-                variant="outline"
-                className="mt-4"
-                onClick={() => {
-                  setIsAdding(true);
-                  setProtectionNotice(null);
-                }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Your First Job
-              </Button>
-            )}
-          </div>
-        ) : (
-          filteredJobs.map((job) => {
-            const date = new Date(job.createdAt).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            });
-
-            // Match score calculation
+      {/* Jobs Listing */}
+      {filteredJobs.length === 0 ? (
+        <div className="py-16 text-center text-muted-foreground border-2 border-dashed rounded-2xl bg-card/40 px-4">
+          <Briefcase className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+          <h3 className="text-base sm:text-lg font-medium text-foreground">No jobs found</h3>
+          <p className="text-xs sm:text-sm mt-1 max-w-sm mx-auto text-muted-foreground">
+            {searchQuery
+              ? "No saved jobs match your current search query."
+              : "Add a job posting link or paste a job description to get started!"}
+          </p>
+          {!searchQuery && (
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => {
+                setIsAdding(true);
+                setProtectionNotice(null);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Add Your First Job
+            </Button>
+          )}
+        </div>
+      ) : viewMode === "grid" ? (
+        /* GRID VIEW: 2 columns on medium/large screens for maximum readability */
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {filteredJobs.map((job) => {
             const matchScore =
               job.jobMatches && job.jobMatches.length > 0
                 ? job.jobMatches[0].overallScore
@@ -687,17 +723,17 @@ export default function JobsClient({
                 key={job.id}
                 className="flex flex-col h-full hover:shadow-md hover:border-primary/40 transition-all duration-200 border-border/80 group rounded-xl overflow-hidden bg-card"
               >
-                <CardHeader className="pb-3 px-4 sm:px-5 pt-4 sm:pt-5">
+                {/* Header Zone */}
+                <div className="p-5 pb-3">
                   <div className="flex justify-between items-start gap-3">
-                    <div className="flex items-start gap-3 min-w-0 flex-1">
-                      {/* Company Avatar with initials */}
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 via-primary/20 to-primary/30 border border-primary/25 shadow-xs flex items-center justify-center font-bold text-primary shrink-0 text-sm">
+                    <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/10 via-primary/20 to-primary/30 border border-primary/25 shadow-xs flex items-center justify-center font-bold text-primary shrink-0 text-base">
                         {job.company.charAt(0).toUpperCase()}
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <CardTitle
-                          className="text-base font-semibold leading-snug line-clamp-2 hover:text-primary cursor-pointer transition-colors break-words"
+                        <h3
+                          className="text-base sm:text-lg font-semibold leading-snug line-clamp-2 hover:text-primary cursor-pointer transition-colors break-words"
                           title={job.position}
                           onClick={() => {
                             setSelectedJob(job);
@@ -705,11 +741,11 @@ export default function JobsClient({
                           }}
                         >
                           {job.position}
-                        </CardTitle>
-                        <CardDescription className="font-medium text-foreground/80 flex items-center gap-1.5 mt-1 truncate text-xs">
+                        </h3>
+                        <p className="font-medium text-foreground/80 flex items-center gap-1.5 mt-1 text-xs sm:text-sm">
                           <Building className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate">{job.company}</span>
-                        </CardDescription>
+                        </p>
                       </div>
                     </div>
 
@@ -756,106 +792,106 @@ export default function JobsClient({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                </CardHeader>
+                </div>
 
-                <CardContent className="px-4 sm:px-5 pb-4 flex-1 space-y-3.5">
-                  {/* Meta Badges */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {seniority && (
-                      <Badge variant="secondary" className="text-xs font-normal px-2 py-0.5">
-                        {seniority}
-                      </Badge>
-                    )}
-                    <Badge variant="outline" className="text-xs font-normal flex items-center gap-1 px-2 py-0.5">
-                      <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
-                      <span className="truncate max-w-[120px]">
-                        {job.location || "Remote / General"}
-                      </span>
+                {/* Badges & Meta Zone */}
+                <div className="px-5 pb-3 flex flex-wrap items-center gap-1.5">
+                  {seniority && (
+                    <Badge variant="secondary" className="text-xs font-normal px-2.5 py-0.5 whitespace-nowrap">
+                      {seniority}
                     </Badge>
-                    {job.employmentType && (
-                      <Badge variant="outline" className="text-xs font-normal flex items-center gap-1 px-2 py-0.5">
-                        <Briefcase className="h-3 w-3 text-muted-foreground shrink-0" />
-                        <span className="truncate max-w-[110px]">{job.employmentType}</span>
-                      </Badge>
-                    )}
-                  </div>
-
-                  {/* Original Link badge if present */}
-                  {job.url && (
-                    <div>
-                      <a
-                        href={job.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium bg-primary/5 hover:bg-primary/10 px-2.5 py-1 rounded-md transition-colors max-w-full truncate"
-                      >
-                        <ExternalLink className="h-3 w-3 shrink-0" />
-                        <span className="truncate">Source: {host}</span>
-                      </a>
-                    </div>
                   )}
+                  <Badge variant="outline" className="text-xs font-normal flex items-center gap-1 px-2.5 py-0.5 whitespace-nowrap">
+                    <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                    <span>{job.location || "Remote / Unspecified"}</span>
+                  </Badge>
+                  {job.employmentType && (
+                    <Badge variant="outline" className="text-xs font-normal flex items-center gap-1 px-2.5 py-0.5 whitespace-nowrap">
+                      <Briefcase className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span>{formatEmploymentType(job.employmentType)}</span>
+                    </Badge>
+                  )}
+                  {job.experienceRequirement && (
+                    <Badge variant="outline" className="text-xs font-normal flex items-center gap-1 px-2.5 py-0.5 whitespace-nowrap">
+                      <Clock className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span>{job.experienceRequirement}</span>
+                    </Badge>
+                  )}
+                  {job.url && (
+                    <a
+                      href={job.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium bg-primary/5 hover:bg-primary/10 px-2.5 py-0.5 rounded-md transition-colors whitespace-nowrap"
+                    >
+                      <ExternalLink className="h-3 w-3 shrink-0" />
+                      <span>Source: {host}</span>
+                    </a>
+                  )}
+                </div>
 
-                  {/* Skills Section with uniform spacing */}
-                  <div className="space-y-1.5 pt-0.5">
-                    <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                      Required Skills
-                    </div>
+                {/* Skills Zone */}
+                <div className="px-5 pb-4 flex-1">
+                  <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                    Required Skills
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 min-h-[2rem]">
                     {requiredSkills.length > 0 ? (
-                      <div className="flex flex-wrap gap-1.5 min-h-[1.75rem]">
-                        {requiredSkills.slice(0, 4).map((skill, idx) => (
+                      <>
+                        {requiredSkills.slice(0, 5).map((skill, idx) => (
                           <span
                             key={idx}
-                            className="inline-flex items-center text-xs px-2 py-0.5 rounded-md bg-muted text-foreground/90 font-mono"
+                            className="inline-flex items-center text-xs px-2.5 py-1 rounded-md bg-muted text-foreground/90 font-mono whitespace-nowrap"
                           >
                             {skill}
                           </span>
                         ))}
-                        {requiredSkills.length > 4 && (
-                          <span className="text-xs text-muted-foreground px-1 py-0.5 self-center">
-                            +{requiredSkills.length - 4} more
+                        {requiredSkills.length > 5 && (
+                          <span className="text-xs text-muted-foreground px-1.5 py-1 self-center whitespace-nowrap">
+                            +{requiredSkills.length - 5} more
                           </span>
                         )}
-                      </div>
+                      </>
                     ) : (
-                      <div className="text-xs text-muted-foreground italic min-h-[1.75rem] flex items-center">
-                        Detailed role requirements in description
-                      </div>
+                      <span className="text-xs text-muted-foreground italic py-1">
+                        Detailed role requirements available in description
+                      </span>
                     )}
                   </div>
+                </div>
 
-                  {/* Match Score */}
-                  <div className="pt-2 border-t border-border/50">
-                    <div className="flex justify-between items-center text-xs mb-1.5">
-                      <span className="font-medium text-muted-foreground">Match Score</span>
-                      <span
-                        className={`font-bold ${
-                          matchScore >= 80
-                            ? "text-emerald-600 dark:text-emerald-400"
-                            : matchScore >= 70
-                            ? "text-primary"
-                            : "text-amber-500"
-                        }`}
-                      >
-                        {matchScore}%
-                      </span>
-                    </div>
-                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-500 ${
-                          matchScore >= 80
-                            ? "bg-emerald-500"
-                            : matchScore >= 70
-                            ? "bg-primary"
-                            : "bg-amber-500"
-                        }`}
-                        style={{ width: `${matchScore}%` }}
-                      />
-                    </div>
+                {/* Match Score Zone - Pinned with mt-auto */}
+                <div className="mt-auto px-5 pt-3 pb-3 border-t border-border/50">
+                  <div className="flex justify-between items-center text-xs mb-1.5">
+                    <span className="font-medium text-muted-foreground">Match Fit</span>
+                    <span
+                      className={`font-bold ${
+                        matchScore >= 80
+                          ? "text-emerald-600 dark:text-emerald-400"
+                          : matchScore >= 70
+                          ? "text-primary"
+                          : "text-amber-500"
+                      }`}
+                    >
+                      {matchScore}%
+                    </span>
                   </div>
-                </CardContent>
+                  <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        matchScore >= 80
+                          ? "bg-emerald-500"
+                          : matchScore >= 70
+                          ? "bg-primary"
+                          : "bg-amber-500"
+                      }`}
+                      style={{ width: `${matchScore}%` }}
+                    />
+                  </div>
+                </div>
 
-                {/* Footer with action buttons */}
-                <CardFooter className="mt-auto px-4 sm:px-5 py-3 border-t border-border/50 bg-muted/20 flex items-center gap-2">
+                {/* Footer Actions */}
+                <div className="px-5 py-3.5 border-t border-border/50 bg-muted/20 flex items-center gap-2.5">
                   <Button
                     variant="outline"
                     size="sm"
@@ -890,12 +926,187 @@ export default function JobsClient({
                       </>
                     )}
                   </Button>
-                </CardFooter>
+                </div>
               </Card>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      ) : (
+        /* LIST VIEW: Responsive horizontal cards */
+        <div className="space-y-4">
+          {filteredJobs.map((job) => {
+            const matchScore =
+              job.jobMatches && job.jobMatches.length > 0
+                ? job.jobMatches[0].overallScore
+                : job.analysis
+                ? 82
+                : 75;
+
+            const requiredSkills = safeJsonParse(job.analysis?.requiredSkills);
+            const seniority = job.analysis?.seniority;
+            const isTracked = job.applications && job.applications.length > 0;
+            const host = getHostName(job.url);
+
+            return (
+              <Card
+                key={job.id}
+                className="p-4 sm:p-5 hover:shadow-md hover:border-primary/40 transition-all border-border/80 rounded-xl bg-card"
+              >
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  {/* Left Column: Info & Badges */}
+                  <div className="flex items-start gap-4 min-w-0 flex-1">
+                    <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 via-primary/20 to-primary/30 border border-primary/25 shadow-xs flex items-center justify-center font-bold text-primary shrink-0 text-base">
+                      {job.company.charAt(0).toUpperCase()}
+                    </div>
+
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div>
+                        <h3
+                          className="text-base sm:text-lg font-semibold leading-snug hover:text-primary cursor-pointer transition-colors break-words"
+                          onClick={() => {
+                            setSelectedJob(job);
+                            setDetailModalTab("overview");
+                          }}
+                        >
+                          {job.position}
+                        </h3>
+                        <p className="text-xs sm:text-sm font-medium text-foreground/80 flex items-center gap-1.5 mt-0.5">
+                          <Building className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span>{job.company}</span>
+                        </p>
+                      </div>
+
+                      {/* Meta badges */}
+                      <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                        {seniority && (
+                          <Badge variant="secondary" className="text-xs font-normal px-2 py-0.5 whitespace-nowrap">
+                            {seniority}
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="text-xs font-normal flex items-center gap-1 px-2 py-0.5 whitespace-nowrap">
+                          <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                          <span>{job.location || "Remote / Unspecified"}</span>
+                        </Badge>
+                        {job.employmentType && (
+                          <Badge variant="outline" className="text-xs font-normal flex items-center gap-1 px-2 py-0.5 whitespace-nowrap">
+                            <Briefcase className="h-3 w-3 text-muted-foreground shrink-0" />
+                            <span>{formatEmploymentType(job.employmentType)}</span>
+                          </Badge>
+                        )}
+                        {job.url && (
+                          <a
+                            href={job.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium bg-primary/5 hover:bg-primary/10 px-2 py-0.5 rounded-md transition-colors whitespace-nowrap"
+                          >
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                            <span>{host}</span>
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Skills */}
+                      {requiredSkills.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {requiredSkills.slice(0, 4).map((skill, idx) => (
+                            <span
+                              key={idx}
+                              className="inline-flex items-center text-xs px-2 py-0.5 rounded-md bg-muted text-foreground/90 font-mono whitespace-nowrap"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                          {requiredSkills.length > 4 && (
+                            <span className="text-xs text-muted-foreground px-1 py-0.5 self-center">
+                              +{requiredSkills.length - 4} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right Column: Match & Actions */}
+                  <div className="flex flex-col sm:flex-row lg:flex-col items-start sm:items-center lg:items-end justify-between gap-3 shrink-0 pt-3 lg:pt-0 border-t lg:border-t-0 border-border/40">
+                    <div className="flex items-center gap-2 min-w-[130px]">
+                      <div className="text-xs font-medium text-muted-foreground">Match:</div>
+                      <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${
+                            matchScore >= 80 ? "bg-emerald-500" : matchScore >= 70 ? "bg-primary" : "bg-amber-500"
+                          }`}
+                          style={{ width: `${matchScore}%` }}
+                        />
+                      </div>
+                      <span className="text-xs font-bold">{matchScore}%</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-xs h-8 px-3"
+                        onClick={() => {
+                          setSelectedJob(job);
+                          setDetailModalTab("overview");
+                        }}
+                      >
+                        <Eye className="mr-1.5 h-3.5 w-3.5" />
+                        Details
+                      </Button>
+                      <Button
+                        variant={isTracked ? "secondary" : "default"}
+                        size="sm"
+                        className="text-xs h-8 px-3"
+                        disabled={isTracked || trackingJobId === job.id}
+                        onClick={() => handleTrackApplication(job.id)}
+                      >
+                        {trackingJobId === job.id ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : isTracked ? (
+                          <>
+                            <CheckCircle2 className="mr-1.5 h-3.5 w-3.5 text-emerald-500" />
+                            In Pipeline
+                          </>
+                        ) : (
+                          <>
+                            <Send className="mr-1.5 h-3.5 w-3.5" />
+                            Track App
+                          </>
+                        )}
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0"
+                            />
+                          }
+                        >
+                          <span className="sr-only">Open menu</span>
+                          <MoreHorizontal size={16} />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => handleDeleteJob(job.id, job.company, job.position)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Job
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      )}
 
       {/* Detailed Inspection Dialog Modal with Responsive Tabs */}
       {selectedJob && (
@@ -981,20 +1192,20 @@ export default function JobsClient({
                   {/* Meta Badges */}
                   <div className="flex flex-wrap gap-2 text-xs">
                     {selectedJob.analysis?.seniority && (
-                      <Badge variant="secondary" className="px-2.5 py-1">
+                      <Badge variant="secondary" className="px-2.5 py-1 whitespace-nowrap">
                         Seniority: {selectedJob.analysis.seniority}
                       </Badge>
                     )}
-                    <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1">
+                    <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
                       <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                       {selectedJob.location || "Location not specified"}
                     </Badge>
-                    <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1">
+                    <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
                       <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                      {selectedJob.employmentType || "Employment type not specified"}
+                      {formatEmploymentType(selectedJob.employmentType)}
                     </Badge>
                     {selectedJob.experienceRequirement && (
-                      <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1">
+                      <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1 whitespace-nowrap">
                         <Clock className="h-3.5 w-3.5 text-muted-foreground" />
                         Experience: {selectedJob.experienceRequirement}
                       </Badge>
@@ -1049,7 +1260,7 @@ export default function JobsClient({
                           <Badge
                             key={idx}
                             variant="secondary"
-                            className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 font-mono text-xs px-2.5 py-1"
+                            className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 font-mono text-xs px-2.5 py-1 whitespace-nowrap"
                           >
                             {skill}
                           </Badge>
@@ -1074,7 +1285,7 @@ export default function JobsClient({
                           <Badge
                             key={idx}
                             variant="outline"
-                            className="border-primary/30 text-primary font-mono text-xs px-2.5 py-1"
+                            className="border-primary/30 text-primary font-mono text-xs px-2.5 py-1 whitespace-nowrap"
                           >
                             {skill}
                           </Badge>
@@ -1091,7 +1302,7 @@ export default function JobsClient({
                         {safeJsonParse(selectedJob.analysis?.keywords).map((kw, idx) => (
                           <span
                             key={idx}
-                            className="text-xs px-2.5 py-1 rounded-md bg-muted text-muted-foreground"
+                            className="text-xs px-2.5 py-1 rounded-md bg-muted text-muted-foreground whitespace-nowrap"
                           >
                             #{kw}
                           </span>
@@ -1109,7 +1320,7 @@ export default function JobsClient({
                   {safeJsonParse(selectedJob.analysis?.responsibilities).length > 0 ? (
                     <ul className="space-y-2 text-sm text-foreground/90">
                       {safeJsonParse(selectedJob.analysis?.responsibilities).map((resp, idx) => (
-                        <li key={idx} className="flex items-start gap-2.5 p-2 rounded-lg bg-muted/30">
+                        <li key={idx} className="flex items-start gap-2.5 p-2.5 rounded-lg bg-muted/30">
                           <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                           <span className="leading-relaxed">{resp}</span>
                         </li>
