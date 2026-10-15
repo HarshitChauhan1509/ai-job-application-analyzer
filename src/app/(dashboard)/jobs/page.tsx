@@ -12,7 +12,17 @@ export default async function JobsPage() {
     orderBy: { createdAt: "desc" },
     include: {
       analysis: true,
-    }
+      jobMatches: {
+        orderBy: { overallScore: "desc" },
+        take: 1,
+      },
+      applications: {
+        select: {
+          id: true,
+          status: true,
+        },
+      },
+    },
   });
 
   return <JobsClient initialJobs={jobs} userId={user.id} />;
