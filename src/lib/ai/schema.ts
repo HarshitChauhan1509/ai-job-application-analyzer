@@ -28,6 +28,12 @@ export const JobAnalysisSchema = z.object({
 
 export type JobAnalysisOutput = z.infer<typeof JobAnalysisSchema>;
 
+export const JobFromImagesSchema = JobAnalysisSchema.extend({
+  extractedDescription: z.string().describe("The full transcribed text of the job description across all images"),
+});
+
+export type JobFromImagesOutput = z.infer<typeof JobFromImagesSchema>;
+
 export const JobMatchSchema = z.object({
   overallScore: z.number().min(0).max(100).describe("Overall match percentage"),
   skillsScore: z.number().min(0).max(100).describe("Skills match percentage"),
