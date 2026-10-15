@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
-import { analyzeJobDescription } from "@/lib/ai/job-analyzer";
+import { analyzeJobDescription, analyzeJobFromImages } from "@/lib/ai/job-analyzer";
 import { scrapeJobUrl, ScrapedJobResult } from "@/lib/scraper";
 import { matchJobToResume } from "@/lib/ai/job-matcher";
 
@@ -172,3 +172,115 @@ export async function deleteJobAction(jobId: string) {
     return { success: false, error: error?.message || "Failed to delete job" };
   }
 }
+
+/**
+ * Analyzes one or more images of a job description using Vision AI,
+ * extracts text and structured role requirements, and creates Job + JobAnalysis in the database.
+ */
+export async function analyzeJobImagesAction(params: {
+  images: string[];
+  url?: string;
+  company?: string;
+  position?: string;
+}) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  if (!params.images || params.images.length === 0) {
+    return { success: false, error: "At least one job description image is required" };
+  }
+
+  try {
+    // 1. Analyze and transcribe images via Vision AI
+    const result = await analyzeJobFromImages(params.images);
+
+    const descriptionText = result.extractedDescription || "Job description extracted from screenshots";
+    const company = params.company?.trim() || result.company || "Company from JD";
+    const position = params.position?.trim() || result.position || "Job Title";
+
+    // 2. Create Job and JobAnalysis in transaction
+    const job = await prisma.$transaction(async (tx) => {
+      const newJob = await tx.job.create({
+        data: {
+          userId: user.id,
+          company,
+          position,
+          description: descriptionText,
+          url: params.url?.trim() || null,
+          location: result.location || null,
+          employmentType: result.employmentType || null,
+          experienceRequirement: result.experienceRequirement || null,
+        },
+      });
+
+      await tx.jobAnalysis.create({
+        data: {
+          jobId: newJob.id,
+          requiredSkills: JSON.stringify(result.requiredSkills || []),
+          preferredSkills: JSON.stringify(result.preferredSkills || []),
+          responsibilities: JSON.stringify(result.responsibilities || []),
+          keywords: JSON.stringify(result.keywords || []),
+          seniority: result.seniority || null,
+        },
+      });
+
+      // 3. Pre-calculate match if user has a resume
+      const resume = await tx.resume.findFirst({
+        where: { userId: user.id },
+        orderBy: [{ isPrimary: "desc" }, { createdAt: "desc" }],
+        include: { analysis: true },
+      });
+
+      if (resume) {
+        const resumeSummary = resume.analysis
+          ? `Resume for ${resume.name}. Strengths: ${resume.analysis.strengths}. Keywords: ${resume.analysis.missingKeywords}`
+          : resume.name;
+
+        const matchResult = await matchJobToResume(resumeSummary, descriptionText);
+
+        await tx.jobMatch.upsert({
+          where: {
+            resumeId_jobId: {
+              resumeId: resume.id,
+              jobId: newJob.id,
+            },
+          },
+          create: {
+            resumeId: resume.id,
+            jobId: newJob.id,
+            overallScore: matchResult.overallScore,
+            skillsScore: matchResult.skillsScore,
+            experienceScore: matchResult.experienceScore,
+            keywordsScore: matchResult.keywordsScore,
+            strongMatches: JSON.stringify(matchResult.strongMatches),
+            missingSkills: JSON.stringify(matchResult.missingSkills),
+            missingKeywords: JSON.stringify(matchResult.missingKeywords),
+            recommendations: JSON.stringify(matchResult.recommendations),
+          },
+          update: {
+            overallScore: matchResult.overallScore,
+            skillsScore: matchResult.skillsScore,
+            experienceScore: matchResult.experienceScore,
+            keywordsScore: matchResult.keywordsScore,
+            strongMatches: JSON.stringify(matchResult.strongMatches),
+            missingSkills: JSON.stringify(matchResult.missingSkills),
+            missingKeywords: JSON.stringify(matchResult.missingKeywords),
+            recommendations: JSON.stringify(matchResult.recommendations),
+          },
+        });
+      }
+
+      return newJob;
+    });
+
+    revalidatePath("/jobs");
+    revalidatePath("/dashboard");
+    return { success: true, job };
+  } catch (error: any) {
+    console.error("Failed to analyze job images:", error);
+    return { success: false, error: error?.message || "Failed to process job description images" };
+  }
+}
+
