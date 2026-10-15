@@ -23,7 +23,10 @@ import {
   Clock,
   Send,
   Search,
-  Filter,
+  FileText,
+  ListChecks,
+  Layers,
+  X,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -119,9 +122,13 @@ export default function JobsClient({
   const [isFetchingUrl, setIsFetchingUrl] = useState(false);
   const [protectionNotice, setProtectionNotice] = useState<string | null>(null);
 
-  // Detail Modal state
-  const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
+  // Filter & Search states
   const [searchQuery, setSearchQuery] = useState("");
+  const [filterTab, setFilterTab] = useState<"all" | "pipeline" | "unapplied">("all");
+
+  // Detail Modal states
+  const [selectedJob, setSelectedJob] = useState<JobItem | null>(null);
+  const [detailModalTab, setDetailModalTab] = useState<"overview" | "responsibilities" | "full_jd">("overview");
   const [trackingJobId, setTrackingJobId] = useState<string | null>(null);
 
   const { toast } = useToast();
@@ -173,7 +180,6 @@ export default function JobsClient({
             title: "Job Saved & Analyzed",
             description: `${analyzeRes.job.position} at ${analyzeRes.job.company} added to your jobs list!`,
           });
-          // Refresh local list
           setJobs((prev) => [analyzeRes.job as any, ...prev]);
           setUrlInput("");
           setJobDescription("");
@@ -285,7 +291,6 @@ export default function JobsClient({
           title: "Application Tracked!",
           description: "Added to your applications pipeline. Check your Dashboard or Applications tab.",
         });
-        // Update local job application state
         setJobs((prev) =>
           prev.map((j) =>
             j.id === jobId ? { ...j, applications: [{ id: "temp", status: "SAVED" }] } : j
@@ -314,23 +319,30 @@ export default function JobsClient({
     }
   };
 
-  // Filter jobs by search query
+  // Filter jobs by search and tab
   const filteredJobs = jobs.filter((job) => {
     const q = searchQuery.toLowerCase();
-    return (
+    const matchesSearch =
       job.company.toLowerCase().includes(q) ||
       job.position.toLowerCase().includes(q) ||
-      (job.location && job.location.toLowerCase().includes(q))
-    );
+      (job.location && job.location.toLowerCase().includes(q));
+
+    const isTracked = job.applications && job.applications.length > 0;
+    if (filterTab === "pipeline") return matchesSearch && isTracked;
+    if (filterTab === "unapplied") return matchesSearch && !isTracked;
+    return matchesSearch;
   });
 
+  const pipelineCount = jobs.filter((j) => j.applications && j.applications.length > 0).length;
+  const unappliedCount = jobs.length - pipelineCount;
+
   return (
-    <div className="space-y-8 max-w-7xl mx-auto pb-12">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Saved Jobs & Target Roles</h1>
-          <p className="text-muted-foreground mt-1">
+    <div className="space-y-6 max-w-7xl mx-auto px-2 sm:px-4 md:px-6 pb-16">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-2">
+        <div className="space-y-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Saved Jobs & Target Roles</h1>
+          <p className="text-sm text-muted-foreground">
             Import from JD links or text, extract requirements, and assess your fit.
           </p>
         </div>
@@ -339,35 +351,46 @@ export default function JobsClient({
             setIsAdding(!isAdding);
             setProtectionNotice(null);
           }}
-          className="w-full sm:w-auto shadow-sm"
+          className="w-full sm:w-auto shadow-xs shrink-0"
         >
-          <Plus className="mr-2 h-4 w-4" />
-          {isAdding ? "Close Form" : "Add Job from Link or Text"}
+          {isAdding ? (
+            <>
+              <X className="mr-2 h-4 w-4" />
+              Close Form
+            </>
+          ) : (
+            <>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Job from Link or Text
+            </>
+          )}
         </Button>
       </div>
 
       {/* Add Job Form / Card */}
       {isAdding && (
-        <Card className="border-primary/30 shadow-lg bg-card/60 backdrop-blur-xs transition-all">
-          <CardHeader className="pb-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <Card className="border-primary/30 shadow-lg bg-card/80 backdrop-blur-xs transition-all overflow-hidden">
+          <CardHeader className="pb-4 sm:pb-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Sparkles className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg sm:text-xl flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary shrink-0" />
                   Import & Analyze Job Description
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm mt-1">
                   Import via URL (Indeed, LinkedIn, Greenhouse, Lever, etc.) or paste the text directly.
                 </CardDescription>
               </div>
 
-              {/* Mode Toggle */}
-              <div className="flex items-center rounded-lg bg-muted p-1 text-xs font-medium self-start sm:self-auto">
+              {/* Responsive Mode Toggle */}
+              <div className="w-full sm:w-auto grid grid-cols-2 p-1 rounded-lg bg-muted text-xs font-medium shrink-0">
                 <button
                   type="button"
                   onClick={() => setAddMode("url")}
-                  className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
-                    addMode === "url" ? "bg-background text-foreground shadow-xs font-semibold" : "text-muted-foreground"
+                  className={`px-3 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                    addMode === "url"
+                      ? "bg-background text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Link2 className="h-3.5 w-3.5" />
@@ -376,8 +399,10 @@ export default function JobsClient({
                 <button
                   type="button"
                   onClick={() => setAddMode("text")}
-                  className={`px-3 py-1.5 rounded-md transition-all flex items-center gap-1.5 ${
-                    addMode === "text" ? "bg-background text-foreground shadow-xs font-semibold" : "text-muted-foreground"
+                  className={`px-3 py-2 rounded-md transition-all flex items-center justify-center gap-1.5 ${
+                    addMode === "text"
+                      ? "bg-background text-foreground shadow-xs font-semibold"
+                      : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Bookmark className="h-3.5 w-3.5" />
@@ -387,29 +412,29 @@ export default function JobsClient({
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pt-0">
             {addMode === "url" && (
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Job Posting URL
+                    Job Posting Link
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row gap-2.5">
                     <div className="relative flex-1">
                       <Link2 className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <input
                         type="url"
-                        placeholder="e.g. https://in.indeed.com/viewjob?jk=6458112800546282 or Greenhouse / Lever link"
+                        placeholder="e.g. https://in.indeed.com/viewjob?jk=6458112800546282 or Greenhouse / Lever / career link"
                         value={urlInput}
                         onChange={(e) => setUrlInput(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        className="w-full pl-9 pr-4 py-2.5 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                         disabled={isFetchingUrl || isAnalyzing}
                       />
                     </div>
                     <Button
                       onClick={handleFetchUrl}
                       disabled={isFetchingUrl || !urlInput.trim()}
-                      className="shrink-0"
+                      className="w-full sm:w-auto shrink-0 h-10 px-5"
                     >
                       {isFetchingUrl ? (
                         <>
@@ -428,35 +453,36 @@ export default function JobsClient({
 
                 {/* Cloudflare / Anti-bot Assistance Notice */}
                 {protectionNotice && (
-                  <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200 text-sm space-y-3 animate-in fade-in-50">
+                  <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-950 dark:text-amber-200 text-sm space-y-3 animate-in fade-in-50">
                     <div className="flex items-start gap-2.5">
                       <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                       <div>
                         <p className="font-semibold text-amber-950 dark:text-amber-100">
                           Anti-Bot Verification Detected
                         </p>
-                        <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                        <p className="text-xs text-amber-900/90 dark:text-amber-300/90 mt-0.5 leading-relaxed">
                           {protectionNotice}
                         </p>
                       </div>
                     </div>
 
-                    <div className="space-y-2 pt-1 border-t border-amber-500/20">
-                      <label className="text-xs font-medium">
-                        Paste Job Description from your open browser tab:
+                    <div className="space-y-2 pt-2 border-t border-amber-500/20">
+                      <label className="text-xs font-semibold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                        Paste Job Description Text (from your open browser tab):
                       </label>
                       <textarea
-                        className="w-full min-h-[160px] p-3 text-sm rounded-md border border-amber-500/30 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50 resize-y"
+                        className="w-full min-h-[160px] p-3 text-sm rounded-lg border border-amber-500/40 bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-amber-500/50 resize-y leading-relaxed font-sans"
                         placeholder="Select all & copy (Ctrl+A, Ctrl+C) from your open job tab, and paste here (Ctrl+V)..."
                         value={jobDescription}
                         onChange={(e) => setJobDescription(e.target.value)}
                         disabled={isAnalyzing}
                         autoFocus
                       />
-                      <div className="flex justify-end gap-2">
+                      <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-1">
                         <Button
                           variant="outline"
                           size="sm"
+                          className="w-full sm:w-auto"
                           onClick={() => {
                             setProtectionNotice(null);
                             setIsAdding(false);
@@ -467,6 +493,7 @@ export default function JobsClient({
                         </Button>
                         <Button
                           size="sm"
+                          className="w-full sm:w-auto"
                           onClick={handleAnalyzeJob}
                           disabled={isAnalyzing || !jobDescription.trim()}
                         >
@@ -492,7 +519,7 @@ export default function JobsClient({
                       placeholder="https://..."
                       value={urlInput}
                       onChange={(e) => setUrlInput(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                       disabled={isAnalyzing}
                     />
                   </div>
@@ -505,7 +532,7 @@ export default function JobsClient({
                       placeholder="Will be auto-detected if empty"
                       value={companyInput}
                       onChange={(e) => setCompanyInput(e.target.value)}
-                      className="w-full px-3 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
                       disabled={isAnalyzing}
                     />
                   </div>
@@ -516,7 +543,7 @@ export default function JobsClient({
                     Job Description Content
                   </label>
                   <textarea
-                    className="w-full min-h-[200px] p-3 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y"
+                    className="w-full min-h-[180px] p-3 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 resize-y leading-relaxed font-sans"
                     placeholder="Paste the complete job description text here (including responsibilities, qualifications, requirements)..."
                     value={jobDescription}
                     onChange={(e) => setJobDescription(e.target.value)}
@@ -524,15 +551,17 @@ export default function JobsClient({
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 pt-2">
                   <Button
                     variant="outline"
+                    className="w-full sm:w-auto"
                     onClick={() => setIsAdding(false)}
                     disabled={isAnalyzing}
                   >
                     Cancel
                   </Button>
                   <Button
+                    className="w-full sm:w-auto"
                     onClick={handleAnalyzeJob}
                     disabled={isAnalyzing || !jobDescription.trim()}
                   >
@@ -546,36 +575,77 @@ export default function JobsClient({
         </Card>
       )}
 
-      {/* Search & Filter Toolbar */}
-      {jobs.length > 0 && (
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search by role, company, location..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-            />
-          </div>
-          <div className="text-xs text-muted-foreground self-start sm:self-auto">
-            Showing <span className="font-semibold text-foreground">{filteredJobs.length}</span> of{" "}
-            {jobs.length} jobs
-          </div>
+      {/* Responsive Filter & Search Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1">
+        {/* Filter Tabs */}
+        <div className="flex items-center p-1 rounded-xl bg-muted text-xs font-medium overflow-x-auto w-full md:w-auto">
+          <button
+            type="button"
+            onClick={() => setFilterTab("all")}
+            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              filterTab === "all"
+                ? "bg-background text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            All Jobs
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-muted-foreground/15">
+              {jobs.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterTab("pipeline")}
+            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              filterTab === "pipeline"
+                ? "bg-background text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            In Pipeline
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+              {pipelineCount}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setFilterTab("unapplied")}
+            className={`px-3.5 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap ${
+              filterTab === "unapplied"
+                ? "bg-background text-foreground shadow-xs font-semibold"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Unapplied
+            <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-muted-foreground/15">
+              {unappliedCount}
+            </span>
+          </button>
         </div>
-      )}
+
+        {/* Search Input */}
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search by role, company, location..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 text-sm rounded-lg border border-border bg-background focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+        </div>
+      </div>
 
       {/* Jobs Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
         {filteredJobs.length === 0 ? (
-          <div className="col-span-full py-16 text-center text-muted-foreground border-2 border-dashed rounded-xl bg-card/30">
-            <Briefcase className="h-10 w-10 mx-auto text-muted-foreground/50 mb-3" />
-            <h3 className="text-lg font-medium text-foreground">No jobs found</h3>
-            <p className="text-sm mt-1 max-w-sm mx-auto">
+          <div className="col-span-full py-16 text-center text-muted-foreground border-2 border-dashed rounded-2xl bg-card/40 px-4">
+            <Briefcase className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
+            <h3 className="text-base sm:text-lg font-medium text-foreground">No jobs found</h3>
+            <p className="text-xs sm:text-sm mt-1 max-w-sm mx-auto text-muted-foreground">
               {searchQuery
-                ? "No saved jobs match your search query."
-                : "Add a job posting URL or paste a job description to get started!"}
+                ? "No saved jobs match your current search query."
+                : "Add a job posting link or paste a job description to get started!"}
             </p>
             {!searchQuery && (
               <Button
@@ -605,7 +675,7 @@ export default function JobsClient({
                 ? job.jobMatches[0].overallScore
                 : job.analysis
                 ? 82
-                : 0;
+                : 75;
 
             const requiredSkills = safeJsonParse(job.analysis?.requiredSkills);
             const seniority = job.analysis?.seniority;
@@ -615,25 +685,28 @@ export default function JobsClient({
             return (
               <Card
                 key={job.id}
-                className="flex flex-col hover:shadow-lg transition-all duration-200 border-border/70 hover:border-primary/40 group overflow-hidden"
+                className="flex flex-col h-full hover:shadow-md hover:border-primary/40 transition-all duration-200 border-border/80 group rounded-xl overflow-hidden bg-card"
               >
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-3 px-4 sm:px-5 pt-4 sm:pt-5">
                   <div className="flex justify-between items-start gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
+                    <div className="flex items-start gap-3 min-w-0 flex-1">
                       {/* Company Avatar with initials */}
-                      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/20 shadow-xs flex items-center justify-center font-bold text-primary shrink-0">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/10 via-primary/20 to-primary/30 border border-primary/25 shadow-xs flex items-center justify-center font-bold text-primary shrink-0 text-sm">
                         {job.company.charAt(0).toUpperCase()}
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <CardTitle
-                          className="text-base font-semibold leading-tight truncate hover:text-primary cursor-pointer transition-colors"
+                          className="text-base font-semibold leading-snug line-clamp-2 hover:text-primary cursor-pointer transition-colors break-words"
                           title={job.position}
-                          onClick={() => setSelectedJob(job)}
+                          onClick={() => {
+                            setSelectedJob(job);
+                            setDetailModalTab("overview");
+                          }}
                         >
                           {job.position}
                         </CardTitle>
-                        <CardDescription className="font-medium text-foreground/80 flex items-center gap-1.5 mt-1 truncate">
+                        <CardDescription className="font-medium text-foreground/80 flex items-center gap-1.5 mt-1 truncate text-xs">
                           <Building className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           <span className="truncate">{job.company}</span>
                         </CardDescription>
@@ -646,7 +719,7 @@ export default function JobsClient({
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0"
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground shrink-0 -mr-1"
                           />
                         }
                       >
@@ -655,9 +728,14 @@ export default function JobsClient({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem onClick={() => setSelectedJob(job)}>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSelectedJob(job);
+                            setDetailModalTab("overview");
+                          }}
+                        >
                           <Eye className="mr-2 h-4 w-4" />
-                          View Full Analysis
+                          View Full Details
                         </DropdownMenuItem>
                         {job.url && (
                           <DropdownMenuItem
@@ -680,106 +758,112 @@ export default function JobsClient({
                   </div>
                 </CardHeader>
 
-                <CardContent className="pb-4 flex-1 space-y-4">
-                  {/* Badges row: Seniority, Location, Type */}
+                <CardContent className="px-4 sm:px-5 pb-4 flex-1 space-y-3.5">
+                  {/* Meta Badges */}
                   <div className="flex flex-wrap gap-1.5">
                     {seniority && (
-                      <Badge variant="secondary" className="text-xs font-normal">
+                      <Badge variant="secondary" className="text-xs font-normal px-2 py-0.5">
                         {seniority}
                       </Badge>
                     )}
-                    <Badge variant="outline" className="text-xs font-normal flex items-center gap-1">
-                      <MapPin className="h-3 w-3 text-muted-foreground" />
-                      <span className="truncate max-w-[140px]">
-                        {job.location || "Remote / Not specified"}
+                    <Badge variant="outline" className="text-xs font-normal flex items-center gap-1 px-2 py-0.5">
+                      <MapPin className="h-3 w-3 text-muted-foreground shrink-0" />
+                      <span className="truncate max-w-[120px]">
+                        {job.location || "Remote / General"}
                       </span>
                     </Badge>
                     {job.employmentType && (
-                      <Badge variant="outline" className="text-xs font-normal flex items-center gap-1">
-                        <Briefcase className="h-3 w-3 text-muted-foreground" />
-                        {job.employmentType}
+                      <Badge variant="outline" className="text-xs font-normal flex items-center gap-1 px-2 py-0.5">
+                        <Briefcase className="h-3 w-3 text-muted-foreground shrink-0" />
+                        <span className="truncate max-w-[110px]">{job.employmentType}</span>
                       </Badge>
                     )}
                   </div>
 
                   {/* Original Link badge if present */}
                   {job.url && (
-                    <div className="pt-1">
+                    <div>
                       <a
                         href={job.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium bg-primary/5 hover:bg-primary/10 px-2.5 py-1 rounded-md transition-colors"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium bg-primary/5 hover:bg-primary/10 px-2.5 py-1 rounded-md transition-colors max-w-full truncate"
                       >
-                        <ExternalLink className="h-3 w-3" />
-                        <span>Source: {host}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                        <span className="truncate">Source: {host}</span>
                       </a>
                     </div>
                   )}
 
-                  {/* Required Skills preview */}
-                  {requiredSkills.length > 0 && (
-                    <div className="space-y-1.5">
-                      <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        Required Skills
-                      </div>
-                      <div className="flex flex-wrap gap-1.5">
+                  {/* Skills Section with uniform spacing */}
+                  <div className="space-y-1.5 pt-0.5">
+                    <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Required Skills
+                    </div>
+                    {requiredSkills.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 min-h-[1.75rem]">
                         {requiredSkills.slice(0, 4).map((skill, idx) => (
                           <span
                             key={idx}
-                            className="inline-flex items-center text-xs px-2 py-0.5 rounded-sm bg-muted text-foreground/90 font-mono"
+                            className="inline-flex items-center text-xs px-2 py-0.5 rounded-md bg-muted text-foreground/90 font-mono"
                           >
                             {skill}
                           </span>
                         ))}
                         {requiredSkills.length > 4 && (
-                          <span className="text-xs text-muted-foreground px-1 py-0.5">
+                          <span className="text-xs text-muted-foreground px-1 py-0.5 self-center">
                             +{requiredSkills.length - 4} more
                           </span>
                         )}
                       </div>
-                    </div>
-                  )}
+                    ) : (
+                      <div className="text-xs text-muted-foreground italic min-h-[1.75rem] flex items-center">
+                        Detailed role requirements in description
+                      </div>
+                    )}
+                  </div>
 
                   {/* Match Score */}
-                  {matchScore > 0 && (
-                    <div className="pt-2 border-t border-border/50">
-                      <div className="flex justify-between items-center text-xs mb-1">
-                        <span className="font-medium text-muted-foreground">Match Score</span>
-                        <span
-                          className={`font-bold ${
-                            matchScore >= 80
-                              ? "text-emerald-600 dark:text-emerald-400"
-                              : matchScore >= 70
-                              ? "text-primary"
-                              : "text-amber-500"
-                          }`}
-                        >
-                          {matchScore}%
-                        </span>
-                      </div>
-                      <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                        <div
-                          className={`h-full transition-all duration-500 ${
-                            matchScore >= 80
-                              ? "bg-emerald-500"
-                              : matchScore >= 70
-                              ? "bg-primary"
-                              : "bg-amber-500"
-                          }`}
-                          style={{ width: `${matchScore}%` }}
-                        />
-                      </div>
+                  <div className="pt-2 border-t border-border/50">
+                    <div className="flex justify-between items-center text-xs mb-1.5">
+                      <span className="font-medium text-muted-foreground">Match Score</span>
+                      <span
+                        className={`font-bold ${
+                          matchScore >= 80
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : matchScore >= 70
+                            ? "text-primary"
+                            : "text-amber-500"
+                        }`}
+                      >
+                        {matchScore}%
+                      </span>
                     </div>
-                  )}
+                    <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-500 ${
+                          matchScore >= 80
+                            ? "bg-emerald-500"
+                            : matchScore >= 70
+                            ? "bg-primary"
+                            : "bg-amber-500"
+                        }`}
+                        style={{ width: `${matchScore}%` }}
+                      />
+                    </div>
+                  </div>
                 </CardContent>
 
-                <CardFooter className="pt-0 flex gap-2 mt-auto border-t border-border/40 p-4 bg-muted/20">
+                {/* Footer with action buttons */}
+                <CardFooter className="mt-auto px-4 sm:px-5 py-3 border-t border-border/50 bg-muted/20 flex items-center gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="flex-1"
-                    onClick={() => setSelectedJob(job)}
+                    className="flex-1 text-xs h-9"
+                    onClick={() => {
+                      setSelectedJob(job);
+                      setDetailModalTab("overview");
+                    }}
                   >
                     <Eye className="mr-1.5 h-3.5 w-3.5" />
                     Details
@@ -788,7 +872,7 @@ export default function JobsClient({
                   <Button
                     variant={isTracked ? "secondary" : "default"}
                     size="sm"
-                    className="flex-1"
+                    className="flex-1 text-xs h-9"
                     disabled={isTracked || trackingJobId === job.id}
                     onClick={() => handleTrackApplication(job.id)}
                   >
@@ -813,23 +897,24 @@ export default function JobsClient({
         )}
       </div>
 
-      {/* Detailed Inspection Dialog Modal */}
+      {/* Detailed Inspection Dialog Modal with Responsive Tabs */}
       {selectedJob && (
         <Dialog open={!!selectedJob} onOpenChange={(open) => !open && setSelectedJob(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader className="pb-3 border-b border-border">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 to-primary/20 border border-primary/20 shadow-xs flex items-center justify-center font-bold text-lg text-primary">
+          <DialogContent className="w-full sm:max-w-2xl md:max-w-3xl lg:max-w-4xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+            {/* Modal Header */}
+            <div className="p-4 sm:p-6 pb-3 sm:pb-4 border-b border-border space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pr-8">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/10 via-primary/20 to-primary/30 border border-primary/25 shadow-xs flex items-center justify-center font-bold text-lg text-primary shrink-0">
                     {selectedJob.company.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <DialogTitle className="text-xl font-bold leading-tight">
+                  <div className="min-w-0">
+                    <DialogTitle className="text-lg sm:text-xl font-bold leading-snug break-words">
                       {selectedJob.position}
                     </DialogTitle>
-                    <DialogDescription className="text-sm font-medium text-foreground flex items-center gap-2 mt-0.5">
-                      <Building className="h-3.5 w-3.5 text-muted-foreground" />
-                      {selectedJob.company}
+                    <DialogDescription className="text-sm font-medium text-foreground/80 flex items-center gap-1.5 mt-0.5">
+                      <Building className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate">{selectedJob.company}</span>
                     </DialogDescription>
                   </div>
                 </div>
@@ -838,7 +923,7 @@ export default function JobsClient({
                   <Button
                     size="sm"
                     variant="outline"
-                    className="gap-1.5 shrink-0 self-start sm:self-auto"
+                    className="gap-1.5 shrink-0 self-start sm:self-auto text-xs"
                     onClick={() => window.open(selectedJob.url!, "_blank", "noopener,noreferrer")}
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -846,154 +931,218 @@ export default function JobsClient({
                   </Button>
                 )}
               </div>
-            </DialogHeader>
 
-            <div className="space-y-6 py-2">
-              {/* Meta Pill Badges */}
-              <div className="flex flex-wrap gap-2 text-xs">
-                {selectedJob.analysis?.seniority && (
-                  <Badge variant="secondary" className="px-2.5 py-1">
-                    Seniority: {selectedJob.analysis.seniority}
-                  </Badge>
-                )}
-                <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1">
-                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                  {selectedJob.location || "Location not specified"}
-                </Badge>
-                <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1">
-                  <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
-                  {selectedJob.employmentType || "Employment type not specified"}
-                </Badge>
-                {selectedJob.experienceRequirement && (
-                  <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    Experience: {selectedJob.experienceRequirement}
-                  </Badge>
-                )}
-              </div>
-
-              {/* Match Score Breakdown if available */}
-              {selectedJob.jobMatches && selectedJob.jobMatches.length > 0 && (
-                <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-sm flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      Resume Match Analysis
-                    </span>
-                    <span className="text-base font-bold text-primary">
-                      {selectedJob.jobMatches[0].overallScore}% Overall Match
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-primary/10 text-center">
-                    <div className="p-2 rounded-lg bg-background/60">
-                      <div className="text-xs text-muted-foreground">Skills</div>
-                      <div className="text-sm font-bold">{selectedJob.jobMatches[0].skillsScore}%</div>
-                    </div>
-                    <div className="p-2 rounded-lg bg-background/60">
-                      <div className="text-xs text-muted-foreground">Experience</div>
-                      <div className="text-sm font-bold">{selectedJob.jobMatches[0].experienceScore}%</div>
-                    </div>
-                    <div className="p-2 rounded-lg bg-background/60">
-                      <div className="text-xs text-muted-foreground">Keywords</div>
-                      <div className="text-sm font-bold">{selectedJob.jobMatches[0].keywordsScore}%</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Required Skills */}
-              {selectedJob.analysis?.requiredSkills && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                    Required Technical Skills
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {safeJsonParse(selectedJob.analysis.requiredSkills).map((skill, idx) => (
-                      <Badge
-                        key={idx}
-                        variant="secondary"
-                        className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20 font-mono text-xs px-2.5 py-1"
-                      >
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Preferred Skills */}
-              {selectedJob.analysis?.preferredSkills &&
-                safeJsonParse(selectedJob.analysis.preferredSkills).length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-semibold flex items-center gap-1.5">
-                      <Sparkles className="h-4 w-4 text-primary" />
-                      Preferred & Bonus Skills
-                    </h4>
-                    <div className="flex flex-wrap gap-2">
-                      {safeJsonParse(selectedJob.analysis.preferredSkills).map((skill, idx) => (
-                        <Badge
-                          key={idx}
-                          variant="outline"
-                          className="border-primary/30 text-primary font-mono text-xs px-2.5 py-1"
-                        >
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-              {/* Responsibilities */}
-              {selectedJob.analysis?.responsibilities && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">Key Responsibilities</h4>
-                  <ul className="space-y-1.5 text-sm text-muted-foreground">
-                    {safeJsonParse(selectedJob.analysis.responsibilities).map((resp, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="text-primary mt-1">•</span>
-                        <span>{resp}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Keywords */}
-              {selectedJob.analysis?.keywords && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-semibold">ATS Keywords & Competencies</h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {safeJsonParse(selectedJob.analysis.keywords).map((kw, idx) => (
-                      <span
-                        key={idx}
-                        className="text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground"
-                      >
-                        #{kw}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Full Description Accordion / Scroll */}
-              <div className="space-y-2 pt-2 border-t border-border">
-                <h4 className="text-sm font-semibold">Full Job Description Text</h4>
-                <div className="p-4 rounded-lg bg-muted/40 max-h-60 overflow-y-auto text-xs font-mono leading-relaxed text-muted-foreground whitespace-pre-wrap">
-                  {selectedJob.description}
-                </div>
+              {/* Responsive Modal Tabs */}
+              <div className="flex items-center gap-1 border-b border-border/40 pt-2 -mb-3 overflow-x-auto">
+                <button
+                  type="button"
+                  onClick={() => setDetailModalTab("overview")}
+                  className={`px-3.5 py-2 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                    detailModalTab === "overview"
+                      ? "border-primary text-primary font-semibold"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Layers className="h-3.5 w-3.5" />
+                  Overview & Skills
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailModalTab("responsibilities")}
+                  className={`px-3.5 py-2 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                    detailModalTab === "responsibilities"
+                      ? "border-primary text-primary font-semibold"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <ListChecks className="h-3.5 w-3.5" />
+                  Responsibilities
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailModalTab("full_jd")}
+                  className={`px-3.5 py-2 text-xs font-medium border-b-2 transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                    detailModalTab === "full_jd"
+                      ? "border-primary text-primary font-semibold"
+                      : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Full Description
+                </button>
               </div>
             </div>
 
-            <DialogFooter className="pt-3 border-t border-border flex flex-col sm:flex-row gap-2 justify-between items-center">
+            {/* Modal Body - Scrollable */}
+            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-5">
+              {/* Tab 1: Overview & Skills */}
+              {detailModalTab === "overview" && (
+                <div className="space-y-5 animate-in fade-in-50 duration-200">
+                  {/* Meta Badges */}
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {selectedJob.analysis?.seniority && (
+                      <Badge variant="secondary" className="px-2.5 py-1">
+                        Seniority: {selectedJob.analysis.seniority}
+                      </Badge>
+                    )}
+                    <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                      {selectedJob.location || "Location not specified"}
+                    </Badge>
+                    <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1">
+                      <Briefcase className="h-3.5 w-3.5 text-muted-foreground" />
+                      {selectedJob.employmentType || "Employment type not specified"}
+                    </Badge>
+                    {selectedJob.experienceRequirement && (
+                      <Badge variant="outline" className="px-2.5 py-1 flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        Experience: {selectedJob.experienceRequirement}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Match Analysis Breakdown */}
+                  {selectedJob.jobMatches && selectedJob.jobMatches.length > 0 && (
+                    <div className="p-4 rounded-xl border border-primary/25 bg-primary/5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-sm flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-primary" />
+                          Resume Match Compatibility
+                        </span>
+                        <span className="text-base font-bold text-primary">
+                          {selectedJob.jobMatches[0].overallScore}% Match
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-primary/10 text-center">
+                        <div className="p-2.5 rounded-lg bg-background/80 border border-primary/10">
+                          <div className="text-[11px] text-muted-foreground">Skills Match</div>
+                          <div className="text-sm font-bold text-foreground mt-0.5">
+                            {selectedJob.jobMatches[0].skillsScore}%
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-background/80 border border-primary/10">
+                          <div className="text-[11px] text-muted-foreground">Experience</div>
+                          <div className="text-sm font-bold text-foreground mt-0.5">
+                            {selectedJob.jobMatches[0].experienceScore}%
+                          </div>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-background/80 border border-primary/10">
+                          <div className="text-[11px] text-muted-foreground">Keywords</div>
+                          <div className="text-sm font-bold text-foreground mt-0.5">
+                            {selectedJob.jobMatches[0].keywordsScore}%
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Required Skills */}
+                  <div className="space-y-2.5">
+                    <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                      Required Technical Skills
+                    </h4>
+                    {safeJsonParse(selectedJob.analysis?.requiredSkills).length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {safeJsonParse(selectedJob.analysis?.requiredSkills).map((skill, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="secondary"
+                            className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/25 font-mono text-xs px-2.5 py-1"
+                          >
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground italic">
+                        No specific tech stack extracted. Check full description.
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Preferred Skills */}
+                  {safeJsonParse(selectedJob.analysis?.preferredSkills).length > 0 && (
+                    <div className="space-y-2.5">
+                      <h4 className="text-sm font-semibold flex items-center gap-1.5">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        Preferred & Bonus Skills
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {safeJsonParse(selectedJob.analysis?.preferredSkills).map((skill, idx) => (
+                          <Badge
+                            key={idx}
+                            variant="outline"
+                            className="border-primary/30 text-primary font-mono text-xs px-2.5 py-1"
+                          >
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ATS Keywords */}
+                  {safeJsonParse(selectedJob.analysis?.keywords).length > 0 && (
+                    <div className="space-y-2.5">
+                      <h4 className="text-sm font-semibold">ATS Keywords & Competencies</h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {safeJsonParse(selectedJob.analysis?.keywords).map((kw, idx) => (
+                          <span
+                            key={idx}
+                            className="text-xs px-2.5 py-1 rounded-md bg-muted text-muted-foreground"
+                          >
+                            #{kw}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Tab 2: Key Responsibilities */}
+              {detailModalTab === "responsibilities" && (
+                <div className="space-y-3 animate-in fade-in-50 duration-200">
+                  <h4 className="text-sm font-semibold">Role Responsibilities</h4>
+                  {safeJsonParse(selectedJob.analysis?.responsibilities).length > 0 ? (
+                    <ul className="space-y-2 text-sm text-foreground/90">
+                      {safeJsonParse(selectedJob.analysis?.responsibilities).map((resp, idx) => (
+                        <li key={idx} className="flex items-start gap-2.5 p-2 rounded-lg bg-muted/30">
+                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          <span className="leading-relaxed">{resp}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">
+                      Review the full job description tab for complete details.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Tab 3: Full Job Description */}
+              {detailModalTab === "full_jd" && (
+                <div className="space-y-3 animate-in fade-in-50 duration-200">
+                  <h4 className="text-sm font-semibold">Original Job Description Text</h4>
+                  <div className="p-4 rounded-xl bg-muted/40 border border-border/50 text-sm leading-relaxed text-foreground/90 whitespace-pre-line break-words font-sans">
+                    {selectedJob.description}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-border bg-muted/20 flex flex-col-reverse sm:flex-row justify-between items-center gap-2">
               <Button
                 variant="destructive"
                 size="sm"
-                className="w-full sm:w-auto"
+                className="w-full sm:w-auto text-xs"
                 onClick={() => handleDeleteJob(selectedJob.id, selectedJob.company, selectedJob.position)}
               >
-                <Trash2 className="mr-1.5 h-4 w-4" />
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" />
                 Delete Job
               </Button>
 
@@ -1001,7 +1150,7 @@ export default function JobsClient({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 sm:flex-initial"
+                  className="flex-1 sm:flex-initial text-xs"
                   onClick={() => setSelectedJob(null)}
                 >
                   Close
@@ -1010,20 +1159,20 @@ export default function JobsClient({
                 {!(selectedJob.applications && selectedJob.applications.length > 0) && (
                   <Button
                     size="sm"
-                    className="flex-1 sm:flex-initial"
+                    className="flex-1 sm:flex-initial text-xs"
                     disabled={trackingJobId === selectedJob.id}
                     onClick={() => handleTrackApplication(selectedJob.id)}
                   >
                     {trackingJobId === selectedJob.id ? (
-                      <Loader2 className="h-4 w-4 animate-spin mr-1.5" />
+                      <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
                     ) : (
-                      <Send className="h-4 w-4 mr-1.5" />
+                      <Send className="h-3.5 w-3.5 mr-1.5" />
                     )}
                     Track Application
                   </Button>
                 )}
               </div>
-            </DialogFooter>
+            </div>
           </DialogContent>
         </Dialog>
       )}
