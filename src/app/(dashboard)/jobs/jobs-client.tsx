@@ -762,17 +762,7 @@ export default function JobsClient({
                         <span className="sr-only">Open menu</span>
                         <MoreHorizontal size={16} />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSelectedJob(job);
-                            setDetailModalTab("overview");
-                          }}
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Full Details
-                        </DropdownMenuItem>
+                      <DropdownMenuContent align="end" className="min-w-[170px]">
                         {job.url && (
                           <DropdownMenuItem
                             onClick={() => window.open(job.url!, "_blank", "noopener,noreferrer")}
@@ -781,7 +771,6 @@ export default function JobsClient({
                             Open Original Link
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
                           onClick={() => handleDeleteJob(job.id, job.company, job.position)}
@@ -1042,7 +1031,7 @@ export default function JobsClient({
                       <span className="text-xs font-bold">{matchScore}%</span>
                     </div>
 
-                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                       <Button
                         variant="outline"
                         size="sm"
@@ -1055,6 +1044,17 @@ export default function JobsClient({
                         <Eye className="mr-1.5 h-3.5 w-3.5" />
                         Details
                       </Button>
+                      {job.url && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-xs h-8 px-3 gap-1.5"
+                          onClick={() => window.open(job.url!, "_blank", "noopener,noreferrer")}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Original Link
+                        </Button>
+                      )}
                       <Button
                         variant={isTracked ? "secondary" : "default"}
                         size="sm"
@@ -1089,7 +1089,15 @@ export default function JobsClient({
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal size={16} />
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
+                        <DropdownMenuContent align="end" className="min-w-[170px]">
+                          {job.url && (
+                            <DropdownMenuItem
+                              onClick={() => window.open(job.url!, "_blank", "noopener,noreferrer")}
+                            >
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              Open Original Link
+                            </DropdownMenuItem>
+                          )}
                           <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => handleDeleteJob(job.id, job.company, job.position)}
