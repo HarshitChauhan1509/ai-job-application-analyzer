@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -118,8 +119,12 @@ export default function ResumesClient({ initialResumes, userId }: { initialResum
                   </div>
                 </CardContent>
                 <CardFooter className="pt-0 flex gap-2">
-                  <Button variant="default" className="w-full font-medium">Analyze</Button>
-                  <Button variant="outline" className="w-full font-medium">Improve</Button>
+                  <Link href={`/resumes/${resume.id}`} className="w-full">
+                    <Button variant="default" className="w-full font-medium">Analyze</Button>
+                  </Link>
+                  <Link href="/improve" className="w-full">
+                    <Button variant="outline" className="w-full font-medium">Improve</Button>
+                  </Link>
                 </CardFooter>
               </Card>
             );
