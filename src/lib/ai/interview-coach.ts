@@ -1,23 +1,101 @@
 import { openai } from "./client";
 import { InterviewQuestionsSchema, InterviewEvaluationSchema, InterviewQuestionsOutput, InterviewEvaluationOutput } from "./schema";
 
-function fallbackInterviewQuestions(role: string, difficulty: string, numQuestions: number, categories: string[]): InterviewQuestionsOutput {
-  const pool = [
-    { question: `How do you approach architecting scalable, maintainable systems for a ${role}?`, category: "System Design" },
-    { question: "Describe a situation where you diagnosed and resolved a critical production bug under time constraints.", category: "Behavioral" },
-    { question: "How do you evaluate trade-offs between performance optimization and code readability?", category: "Technical" },
-    { question: "Can you explain how concurrency and asynchronous processing are managed in your preferred tech stack?", category: "Technical" },
-    { question: "Tell me about a time when you had a technical disagreement with a team member. How was it resolved?", category: "Leadership" },
-    { question: "How do you ensure robust test coverage, CI/CD automation, and zero-downtime deployments in your workflow?", category: "DevOps" },
-  ];
+function fallbackInterviewQuestions(
+  role: string, 
+  difficulty: string, 
+  numQuestions: number, 
+  categories: string[],
+  jobContext?: string
+): InterviewQuestionsOutput {
+  const categoryPool: Record<string, string[]> = {
+    "JavaScript": [
+      "Can you explain the JavaScript Event Loop, microtasks vs macrotasks, and how asynchronous code executes?",
+      "How do JavaScript closures work, and what are practical use cases or memory leak pitfalls with them?",
+      "Explain the prototype chain in JavaScript and how ES6 classes differ under the hood."
+    ],
+    "React": [
+      "Explain how React's reconciliation algorithm and Virtual DOM diffing work to optimize re-renders.",
+      "When and why would you use useMemo, useCallback, or React.memo, and how do you avoid premature optimization?",
+      "How do Server Components and Client Components interact in modern React / Next.js architectures?"
+    ],
+    "Node.js": [
+      "How does Node.js handle CPU-intensive tasks without blocking the main event loop?",
+      "What are the best practices for stream processing and memory management when handling large payloads in Node.js?",
+      "How do you design graceful shutdown, connection pooling, and error handling in a production Node.js service?"
+    ],
+    "System Design": [
+      `How would you design a highly available, fault-tolerant system for a ${role}?`,
+      "How do you approach database sharding, replication lag, and caching strategies (like Cache-Aside vs Write-Through)?",
+      "Explain how you would design a distributed rate limiter or message queue worker system."
+    ],
+    "Behavioral": [
+      "Tell me about a time when you diagnosed and resolved a critical production incident under tight time constraints.",
+      "Describe a situation where you had a significant technical disagreement with a colleague or manager. How was it resolved?",
+      "Tell me about a project where requirements changed midway. How did you adapt and ensure delivery?"
+    ],
+    "HR": [
+      `What motivated you to pursue this ${role} position, and what are your key career goals over the next 2-3 years?`,
+      "How do you manage your time and prioritize when balancing multiple competing deadlines?",
+      "Describe your ideal team culture and what kind of engineering environment helps you do your best work."
+    ],
+    "Leadership": [
+      "How do you mentor junior and mid-level engineers and foster high engineering standards in your team?",
+      "Describe how you break down vague, ambiguous business requirements into actionable engineering sprints.",
+      "How do you build consensus across engineering, product, and design when trade-offs must be made?"
+    ],
+    "DevOps": [
+      "How do you structure CI/CD pipelines, automated testing gates, and canary deployments to minimize deployment risk?",
+      "What observability, logging, and metrics setup do you rely on to quickly debug production regressions?",
+      "How do you handle secrets management and environment isolation across staging and production clusters?"
+    ]
+  };
 
-  const questions = pool.slice(0, Math.min(numQuestions, pool.length)).map((item, idx) => ({
-    id: `q${idx + 1}`,
-    question: item.question,
-    category: categories[idx % categories.length] || item.category,
-  }));
+  const selectedCategories = categories.length > 0 ? categories : ["System Design", "Behavioral", "Technical"];
+  const questions: { id: string; question: string; category: string }[] = [];
 
-  return { questions };
+  // If job context is provided, construct a question focused on the specific job requirements
+  if (jobContext) {
+    const jobSnippet = jobContext.slice(0, 120).replace(/\n/g, " ");
+    questions.push({
+      id: "q1",
+      question: `Based on the target job requirements ("${jobSnippet}..."), how does your past experience align with these core technical responsibilities?`,
+      category: selectedCategories[0] || "Technical Alignment",
+    });
+  }
+
+  // Pick questions from the selected categories
+  let catIndex = 0;
+  while (questions.length < numQuestions) {
+    const cat = selectedCategories[catIndex % selectedCategories.length];
+    const poolForCat = categoryPool[cat] || [
+      `How do you approach complex problem-solving and architectural choices in ${cat}?`,
+      `What are the most challenging technical obstacles you've overcome in ${cat}?`,
+      `How do you ensure code quality, maintainability, and test coverage for ${cat}?`
+    ];
+
+    const questionText = poolForCat[Math.floor(questions.length / selectedCategories.length) % poolForCat.length];
+    
+    // Avoid duplicate questions
+    if (!questions.some(q => q.question === questionText)) {
+      questions.push({
+        id: `q${questions.length + 1}`,
+        question: questionText,
+        category: cat
+      });
+    } else {
+      questions.push({
+        id: `q${questions.length + 1}`,
+        question: `In the context of ${cat} for a ${difficulty} ${role}, how do you tackle scalability, trade-offs, and failure recovery?`,
+        category: cat
+      });
+    }
+
+    catIndex++;
+    if (questions.length >= numQuestions) break;
+  }
+
+  return { questions: questions.slice(0, numQuestions) };
 }
 
 function fallbackInterviewEvaluation(role: string, question: string, answer: string): InterviewEvaluationOutput {
@@ -56,7 +134,8 @@ export async function generateInterviewQuestions(
   role: string, 
   difficulty: string, 
   numQuestions: number,
-  categories: string[]
+  categories: string[],
+  jobContext?: string
 ): Promise<InterviewQuestionsOutput> {
   const hasValidKey =
     process.env.OPENAI_API_KEY &&
@@ -68,6 +147,7 @@ export async function generateInterviewQuestions(
       You are an expert technical interviewer at a top-tier tech company.
       Generate a list of ${numQuestions} interview questions for a ${difficulty} level ${role}.
       Focus on these categories: ${categories.join(", ")}.
+      ${jobContext ? `Base the questions on this job description and its specific requirements:\n${jobContext}` : ""}
       Make the questions realistic, thought-provoking, and appropriate for the specified difficulty level.
     `;
 
@@ -103,7 +183,7 @@ export async function generateInterviewQuestions(
     }
   }
 
-  return fallbackInterviewQuestions(role, difficulty, numQuestions, categories);
+  return fallbackInterviewQuestions(role, difficulty, numQuestions, categories, jobContext);
 }
 
 export async function evaluateInterviewAnswer(
