@@ -41,7 +41,7 @@ export default function MatchPage() {
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       <div className="flex items-center gap-4 mb-6">
-        <Link href="/dashboard/jobs">
+        <Link href="/jobs">
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-5 w-5" />
           </Button>
