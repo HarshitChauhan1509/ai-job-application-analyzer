@@ -5,8 +5,10 @@ import React, { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building, MapPin, MoreHorizontal, Calendar, ArrowRight } from "lucide-react";
+import { Building, MapPin, MoreHorizontal, Calendar, ArrowRight, Search } from "lucide-react";
 import Link from "next/link";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { updateApplicationStatusAction } from "@/app/actions/application";
 
 // Mock data types
@@ -43,6 +45,7 @@ const DEFAULT_COLUMNS = {
 const COLUMN_ORDER = ["SAVED", "APPLIED", "SCREENING", "INTERVIEW", "OFFER", "REJECTED"];
 
 export function KanbanBoard({ initialApplications = [] }: { initialApplications?: Record<string, any>[] }) {
+  const [searchQuery, setSearchQuery] = useState("");
   const [data, setData] = useState<BoardData>(() => {
     const apps: Record<string, Application> = {};
     const cols = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
@@ -156,13 +159,46 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
   }
 
   return (
-    <DragDropContext onDragEnd={onDragEnd}>
-      <div className="flex gap-6 h-[calc(100vh-12rem)] min-w-full overflow-x-auto pb-4">
-        {data.columnOrder.map((columnId) => {
-          const column = data.columns[columnId];
-          const applications = column.applicationIds.map(
-            (appId) => data.applications[appId]
-          );
+    <div className="space-y-4">
+      {/* Kanban Search Filter */}
+      <div className="flex items-center justify-between gap-3 max-w-sm">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Filter pipeline by company or position..."
+            className="pl-9 h-9 text-xs bg-card"
+          />
+        </div>
+        {searchQuery && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSearchQuery("")}
+            className="text-xs h-9 px-2 text-muted-foreground"
+          >
+            Clear
+          </Button>
+        )}
+      </div>
+
+      <DragDropContext onDragEnd={onDragEnd}>
+        <div className="flex gap-6 h-[calc(100vh-15rem)] min-w-full overflow-x-auto pb-4">
+          {data.columnOrder.map((columnId) => {
+            const column = data.columns[columnId];
+            const applications = column.applicationIds
+              .map((appId) => data.applications[appId])
+              .filter((app) => {
+                if (!app) return false;
+                if (!searchQuery.trim()) return true;
+                const q = searchQuery.toLowerCase().trim();
+                return (
+                  app.company.toLowerCase().includes(q) ||
+                  app.position.toLowerCase().includes(q) ||
+                  app.location.toLowerCase().includes(q)
+                );
+              });
 
           return (
             <div key={column.id} className="flex flex-col w-80 shrink-0">
@@ -237,5 +273,6 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
         })}
       </div>
     </DragDropContext>
+    </div>
   );
 }
