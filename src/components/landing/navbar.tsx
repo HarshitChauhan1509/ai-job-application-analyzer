@@ -7,7 +7,11 @@ import { Moon, Sun, Briefcase } from "lucide-react";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-export function Navbar() {
+interface NavbarProps {
+  user?: { name?: string | null; email?: string | null } | null;
+}
+
+export function Navbar({ user }: NavbarProps = {}) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -56,14 +60,24 @@ export function Navbar() {
               {theme === "dark" ? <Sun size={20} /> : <Moon size={20} />}
             </button>
           )}
-          <Link href="/login" className="hidden sm:block text-sm font-medium hover:text-primary transition-colors">
-            Sign In
-          </Link>
-          <Link href="/register">
-            <Button className="rounded-full shadow-md hover:shadow-lg transition-all">
-              Get Started
-            </Button>
-          </Link>
+          {user ? (
+            <Link href="/dashboard">
+              <Button className="rounded-full shadow-md hover:shadow-lg transition-all">
+                Go to Dashboard
+              </Button>
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className="hidden sm:block text-sm font-medium hover:text-primary transition-colors">
+                Sign In
+              </Link>
+              <Link href="/register">
+                <Button className="rounded-full shadow-md hover:shadow-lg transition-all">
+                  Get Started
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </motion.header>
