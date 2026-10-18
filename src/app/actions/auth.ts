@@ -113,3 +113,24 @@ export async function logoutUserAction() {
   redirect("/login");
 }
 
+export async function quickDevLoginAction() {
+  let devUser = await prisma.user.findFirst({
+    where: { email: "harshit@gmail.com" },
+  });
+
+  if (!devUser) {
+    devUser = await prisma.user.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  if (devUser) {
+    await setSession(devUser.id);
+    revalidatePath("/", "layout");
+    redirect("/dashboard");
+  } else {
+    redirect("/login");
+  }
+}
+
+
