@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { ArrowRight, Loader2, AlertCircle } from "lucide-react";
-import { loginUserAction, loginWithGoogleAction } from "@/app/actions/auth";
+import { loginUserAction, loginWithGoogleAction, quickDevLoginAction } from "@/app/actions/auth";
 import { useState } from "react";
 import { useFormStatus } from "react-dom";
 
@@ -67,6 +67,17 @@ export default function LoginPage() {
         <form action={loginWithGoogleAction} className="space-y-2">
           <GoogleSubmitButton />
         </form>
+        {process.env.NODE_ENV === "development" && (
+          <form action={quickDevLoginAction}>
+            <Button
+              type="submit"
+              variant="secondary"
+              className="w-full text-xs font-medium border border-border/60 hover:bg-muted"
+            >
+              ⚡ Quick Dev Sign In (Harshit Chauhan)
+            </Button>
+          </form>
+        )}
         <div className="relative">
           <div className="absolute inset-0 flex items-center">
             <span className="w-full border-t border-border" />
