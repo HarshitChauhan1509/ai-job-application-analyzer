@@ -4,11 +4,25 @@ import { Features } from "@/components/landing/features";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams?: Promise<{ preview?: string; landing?: string }>;
+}) {
+  const params = searchParams ? await searchParams : undefined;
+  const isPreview = params?.preview === "true" || params?.landing === "true";
+
+  const user = await getCurrentUser();
+  if (user && !isPreview) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary/20">
-      <Navbar />
+      <Navbar user={user} />
       <main className="flex-1">
         <Hero />
         
