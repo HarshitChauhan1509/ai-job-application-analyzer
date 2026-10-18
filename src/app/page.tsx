@@ -1,6 +1,8 @@
 import { Navbar } from "@/components/landing/navbar";
 import { Hero } from "@/components/landing/hero";
 import { Features } from "@/components/landing/features";
+import { HowItWorks } from "@/components/landing/how-it-works";
+import { Pricing } from "@/components/landing/pricing";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
@@ -42,6 +44,8 @@ export default async function Home({
         </section>
 
         <Features />
+
+        <HowItWorks />
         
         {/* Testimonials */}
         <section className="py-24 border-y border-border/40 bg-background">
@@ -69,6 +73,8 @@ export default async function Home({
             </div>
           </div>
         </section>
+
+        <Pricing />
 
         {/* CTA Section */}
         <section className="py-24 relative overflow-hidden bg-foreground text-background">
@@ -109,27 +115,29 @@ export default async function Home({
           <div>
             <h4 className="font-semibold mb-4">Product</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">Resume AI</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Job Matcher</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Interview Coach</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Pricing</Link></li>
+              <li><Link href="/#features" className="hover:text-foreground transition-colors">Features</Link></li>
+              <li><Link href="/#how-it-works" className="hover:text-foreground transition-colors">How it works</Link></li>
+              <li><Link href="/#pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
+              <li><Link href="/improve" className="hover:text-foreground transition-colors">Resume AI</Link></li>
+              <li><Link href="/jobs" className="hover:text-foreground transition-colors">Job Matcher</Link></li>
+              <li><Link href="/coach" className="hover:text-foreground transition-colors">Interview Coach</Link></li>
             </ul>
           </div>
           <div>
             <h4 className="font-semibold mb-4">Resources</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">Blog</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Engineering Interview Guide</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Resume Templates</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Help Center</Link></li>
+              <li><Link href="/#how-it-works" className="hover:text-foreground transition-colors">Engineering Workflow</Link></li>
+              <li><Link href="/#pricing" className="hover:text-foreground transition-colors">Plans &amp; Upgrades</Link></li>
+              <li><Link href="/resumes" className="hover:text-foreground transition-colors">Resume Tailoring</Link></li>
+              <li><Link href="/applications" className="hover:text-foreground transition-colors">Application Kanban</Link></li>
             </ul>
           </div>
           <div>
-            <h4 className="font-semibold mb-4">Legal</h4>
+            <h4 className="font-semibold mb-4">Account</h4>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="#" className="hover:text-foreground transition-colors">Privacy Policy</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Terms of Service</Link></li>
-              <li><Link href="#" className="hover:text-foreground transition-colors">Cookie Policy</Link></li>
+              <li><Link href="/login" className="hover:text-foreground transition-colors">Sign In</Link></li>
+              <li><Link href="/register" className="hover:text-foreground transition-colors">Create Account</Link></li>
+              <li><Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard Workspace</Link></li>
             </ul>
           </div>
         </div>
