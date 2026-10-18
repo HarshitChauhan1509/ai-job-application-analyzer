@@ -1,11 +1,18 @@
 import Link from "next/link";
 import { Briefcase } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default function AuthLayout({
+export default async function AuthLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const user = await getCurrentUser();
+  if (user) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-muted/30 p-4">
       <Link href="/" className="flex items-center gap-2 mb-8 group absolute top-8 left-8">
