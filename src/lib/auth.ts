@@ -53,7 +53,21 @@ export async function getCurrentUser() {
     try {
       const user = await prisma.user.findUnique({
         where: { id: userId },
-        select: { id: true, name: true, email: true, image: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          profile: {
+            select: {
+              headline: true,
+              bio: true,
+              website: true,
+              linkedin: true,
+              github: true,
+            },
+          },
+        },
       });
       if (user) return user;
     } catch (error) {
@@ -68,13 +82,41 @@ export async function getCurrentUser() {
     try {
       let devUser = await prisma.user.findFirst({
         where: { email: "harshit@gmail.com" },
-        select: { id: true, name: true, email: true, image: true },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          image: true,
+          profile: {
+            select: {
+              headline: true,
+              bio: true,
+              website: true,
+              linkedin: true,
+              github: true,
+            },
+          },
+        },
       });
 
       if (!devUser) {
         devUser = await prisma.user.findFirst({
           orderBy: { createdAt: "desc" },
-          select: { id: true, name: true, email: true, image: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            image: true,
+            profile: {
+              select: {
+                headline: true,
+                bio: true,
+                website: true,
+                linkedin: true,
+                github: true,
+              },
+            },
+          },
         });
       }
 
