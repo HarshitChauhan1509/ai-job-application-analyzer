@@ -25,11 +25,16 @@ import {
   Building,
   ArrowRight,
   Loader2,
+  Sun,
+  Moon,
+  Laptop,
 } from "lucide-react";
+import { useTheme } from "next-themes";
 import { globalSearchAction, SearchResultItem } from "@/app/actions/search";
 
 export function GlobalSearch() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
@@ -271,6 +276,67 @@ export function GlobalSearch() {
                 </CommandGroup>
               </>
             )}
+
+            {/* Appearance & Themes */}
+            <CommandSeparator />
+            <CommandGroup heading="Appearance & Themes">
+              <CommandItem
+                value="theme light mode appearance switch color brightness"
+                onSelect={() => {
+                  setTheme("light");
+                  setOpen(false);
+                }}
+                className="flex items-center justify-between py-2 px-3 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Sun className="h-4 w-4 text-amber-500" />
+                  <span className="text-xs font-medium">Switch to Light Theme</span>
+                </div>
+                {theme === "light" && (
+                  <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/40 text-primary">
+                    Active
+                  </Badge>
+                )}
+              </CommandItem>
+
+              <CommandItem
+                value="theme dark mode appearance switch color darkness"
+                onSelect={() => {
+                  setTheme("dark");
+                  setOpen(false);
+                }}
+                className="flex items-center justify-between py-2 px-3 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Moon className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-medium">Switch to Dark Theme</span>
+                </div>
+                {theme === "dark" && (
+                  <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/40 text-primary">
+                    Active
+                  </Badge>
+                )}
+              </CommandItem>
+
+              <CommandItem
+                value="theme system auto mode appearance switch preference"
+                onSelect={() => {
+                  setTheme("system");
+                  setOpen(false);
+                }}
+                className="flex items-center justify-between py-2 px-3 cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <Laptop className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-xs font-medium">Use System Theme</span>
+                </div>
+                {theme === "system" && (
+                  <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/40 text-primary">
+                    Active
+                  </Badge>
+                )}
+              </CommandItem>
+            </CommandGroup>
           </CommandList>
         </Command>
       </CommandDialog>
