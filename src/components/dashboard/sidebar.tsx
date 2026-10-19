@@ -1,7 +1,9 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import {
   Briefcase,
@@ -13,6 +15,9 @@ import {
   Sparkles,
   Settings,
   LogOut,
+  Sun,
+  Moon,
+  Laptop,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logoutUserAction } from "@/app/actions/auth";
@@ -28,6 +33,12 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   return (
     <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card px-4 py-6">
@@ -59,7 +70,59 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="mt-auto pt-6 space-y-1 border-t border-border">
+      <div className="mt-auto pt-4 space-y-3 border-t border-border">
+        {/* Theme Segmented Switcher */}
+        <div className="px-1">
+          <div className="flex items-center justify-between mb-1.5 px-1">
+            <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Theme</span>
+            <span className="text-[10px] text-muted-foreground capitalize font-mono">{mounted ? theme : ""}</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1 bg-muted/50 p-1 rounded-lg border border-border/50">
+            <button
+              type="button"
+              onClick={() => setTheme("light")}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer",
+                mounted && theme === "light"
+                  ? "bg-card text-foreground shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              )}
+              title="Light theme"
+            >
+              <Sun size={13} className={mounted && theme === "light" ? "text-amber-500" : ""} />
+              <span>Light</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("dark")}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer",
+                mounted && theme === "dark"
+                  ? "bg-card text-foreground shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              )}
+              title="Dark theme"
+            >
+              <Moon size={13} className={mounted && theme === "dark" ? "text-primary" : ""} />
+              <span>Dark</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTheme("system")}
+              className={cn(
+                "flex items-center justify-center gap-1.5 py-1.5 text-xs font-medium rounded-md transition-all cursor-pointer",
+                mounted && theme === "system"
+                  ? "bg-card text-foreground shadow-xs border border-border/50"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              )}
+              title="System theme"
+            >
+              <Laptop size={13} />
+              <span>Auto</span>
+            </button>
+          </div>
+        </div>
+
         <form action={logoutUserAction}>
           <Button
             type="submit"
