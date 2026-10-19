@@ -72,6 +72,14 @@ export async function globalSearchAction(query: string = ""): Promise<{
         category: "navigation",
         badge: "AI Tool",
       },
+      {
+        id: "nav-profile",
+        title: "Candidate Profile & Details",
+        subtitle: "View and edit your professional headline, bio, and portfolio links",
+        url: "/profile",
+        category: "navigation",
+        badge: "Profile",
+      },
     ];
 
     const matchedPages = !q
