@@ -10,6 +10,7 @@ import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateApplicationStatusAction } from "@/app/actions/application";
+import { formatDate } from "@/lib/format-date";
 
 // Mock data types
 type Application = {
@@ -58,7 +59,7 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
         position: app.job?.position || "Unknown",
         location: app.job?.location || "Remote",
         match,
-        date: new Date(app.updatedAt).toLocaleDateString(),
+        date: formatDate(app.updatedAt),
         status: app.status || "SAVED"
       };
       
@@ -247,7 +248,7 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
                                   </div>
 
                                   <div className="flex items-center justify-between mt-2 pt-3 border-t border-border/50">
-                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground" suppressHydrationWarning>
                                       <Calendar size={12} />
                                       {app.date}
                                     </div>
