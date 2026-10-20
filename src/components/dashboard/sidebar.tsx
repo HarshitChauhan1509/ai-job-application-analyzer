@@ -33,7 +33,7 @@ const navItems = [
   { name: "Profile", href: "/profile", icon: User },
 ];
 
-export function Sidebar() {
+export function Sidebar({ className }: { className?: string } = {}) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -43,7 +43,7 @@ export function Sidebar() {
   }, []);
 
   return (
-    <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card px-4 py-6">
+    <aside className={cn("flex w-64 flex-col border-r border-border bg-card px-4 py-6", className)}>
       <div className="flex items-center gap-2 px-2 mb-8 group">
         <div className="bg-primary text-primary-foreground p-1.5 rounded-md group-hover:scale-105 transition-transform">
           <Briefcase size={20} />
@@ -74,12 +74,11 @@ export function Sidebar() {
 
       <div className="mt-auto pt-4 space-y-3 border-t border-border">
         {/* Theme Segmented Switcher */}
-        <div className="px-1">
+        <div className="px-1" suppressHydrationWarning>
           <div className="flex items-center justify-between mb-1.5 px-1">
             <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Theme</span>
-            <span className="text-[10px] text-muted-foreground capitalize font-mono">{mounted ? theme : ""}</span>
           </div>
-          <div className="grid grid-cols-3 gap-1 bg-muted/50 p-1 rounded-lg border border-border/50">
+          <div className="grid grid-cols-3 gap-1 bg-muted/50 p-1 rounded-lg border border-border/50" suppressHydrationWarning>
             <button
               type="button"
               onClick={() => setTheme("light")}
