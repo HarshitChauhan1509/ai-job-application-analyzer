@@ -35,6 +35,7 @@ import {
   getPastInterviewSessionsAction,
   deleteInterviewSessionAction,
 } from "@/app/actions/interview";
+import { formatDate } from "@/lib/format-date";
 
 interface SavedJob {
   id: string;
@@ -527,13 +528,9 @@ export default function InterviewCoachSetupPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1" suppressHydrationWarning>
                         <Calendar className="h-3 w-3" />
-                        {new Date(session.createdAt).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                        {formatDate(session.createdAt)}
                       </span>
                       <span>{session.totalQuestions} Questions</span>
                     </div>
