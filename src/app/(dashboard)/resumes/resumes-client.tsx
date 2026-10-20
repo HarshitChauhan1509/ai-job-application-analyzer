@@ -44,6 +44,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { FileUploader, RESUME_TYPE_CONFIG, ResumeTypeKey } from "@/components/dashboard/file-uploader";
+import { formatDate } from "@/lib/format-date";
 import {
   deleteResumeAction,
   setPrimaryResumeAction,
@@ -389,11 +390,7 @@ export default function ResumesClient({ initialResumes, jobs = [], userId }: Res
         ) : (
           filteredResumes.map((resume) => {
             const score = resume.analysis?.overallScore || 0;
-            const date = new Date(resume.createdAt).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            });
+            const date = formatDate(resume.createdAt);
 
             const typeKey = (resume.resumeType as ResumeTypeKey) || "GENERAL";
             const typeConfig = RESUME_TYPE_CONFIG[typeKey] || RESUME_TYPE_CONFIG.GENERAL;
@@ -508,7 +505,7 @@ export default function ResumesClient({ initialResumes, jobs = [], userId }: Res
                       <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider block">
                         ATS Quality Score
                       </span>
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground" suppressHydrationWarning>
                         Analyzed {date}
                       </span>
                     </div>
