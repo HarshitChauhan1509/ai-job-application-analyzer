@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { FileUploader } from "@/components/dashboard/file-uploader";
 import { quickCreateApplicationAction } from "@/app/actions/application";
+import { formatDate } from "@/lib/format-date";
 import {
   FileText,
   Briefcase,
@@ -316,8 +317,8 @@ export default function DashboardClient({
                         <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-semibold">
                           {app.status}
                         </Badge>
-                        <div className="text-[10px] text-muted-foreground">
-                          {new Date(app.updatedAt).toLocaleDateString()}
+                        <div className="text-[10px] text-muted-foreground" suppressHydrationWarning>
+                          {formatDate(app.updatedAt)}
                         </div>
                       </div>
                     </Link>
