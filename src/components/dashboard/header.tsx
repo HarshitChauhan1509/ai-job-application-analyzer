@@ -53,7 +53,7 @@ export function Header({ user }: { user?: any }) {
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
               <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
-              <Sidebar />
+              <Sidebar className="flex border-none h-full w-full" />
             </SheetContent>
           </Sheet>
           
