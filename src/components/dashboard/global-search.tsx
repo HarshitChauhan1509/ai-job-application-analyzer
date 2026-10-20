@@ -35,10 +35,15 @@ import { globalSearchAction, SearchResultItem } from "@/app/actions/search";
 export function GlobalSearch() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Open on Cmd+K or Ctrl+K
   useEffect(() => {
@@ -292,7 +297,7 @@ export function GlobalSearch() {
                   <Sun className="h-4 w-4 text-amber-500" />
                   <span className="text-xs font-medium">Switch to Light Theme</span>
                 </div>
-                {theme === "light" && (
+                {mounted && theme === "light" && (
                   <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/40 text-primary">
                     Active
                   </Badge>
@@ -311,7 +316,7 @@ export function GlobalSearch() {
                   <Moon className="h-4 w-4 text-primary" />
                   <span className="text-xs font-medium">Switch to Dark Theme</span>
                 </div>
-                {theme === "dark" && (
+                {mounted && theme === "dark" && (
                   <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/40 text-primary">
                     Active
                   </Badge>
@@ -330,7 +335,7 @@ export function GlobalSearch() {
                   <Laptop className="h-4 w-4 text-muted-foreground" />
                   <span className="text-xs font-medium">Use System Theme</span>
                 </div>
-                {theme === "system" && (
+                {mounted && theme === "system" && (
                   <Badge variant="outline" className="text-[10px] py-0 px-1.5 border-primary/40 text-primary">
                     Active
                   </Badge>
