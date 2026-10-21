@@ -23,6 +23,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { updateProfileDataAction, ProfileData } from "@/app/actions/profile";
+import { ExperienceTimeline } from "@/components/dashboard/experience-timeline";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
@@ -119,6 +120,9 @@ export default function ProfileClient({ initialProfile }: { initialProfile: Prof
                     <Sparkles size={11} className="mr-1" /> Pro Member
                   </Badge>
                 </div>
+                {headline && (
+                  <p className="text-xs font-medium text-primary line-clamp-1">{headline}</p>
+                )}
                 <p className="text-xs text-muted-foreground">{initialProfile.email}</p>
               </div>
             </div>
@@ -166,6 +170,9 @@ export default function ProfileClient({ initialProfile }: { initialProfile: Prof
           </div>
         </CardContent>
       </Card>
+
+      {/* LinkedIn-style Experience Timeline */}
+      <ExperienceTimeline initialExperiences={initialProfile.experience} />
 
       {/* Profile Details Edit Form */}
       <Card className="border-border/60">
