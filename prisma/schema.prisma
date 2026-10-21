@@ -27,16 +27,17 @@ model User {
 }
 
 model Profile {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  headline  String?
-  bio       String?
-  website   String?
-  linkedin  String?
-  github    String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  headline   String?
+  bio        String?
+  website    String?
+  linkedin   String?
+  github     String?
+  experience String?  // Stored as JSON string array of Experience objects
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Resume {
