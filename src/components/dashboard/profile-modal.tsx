@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -27,8 +28,10 @@ import {
   KanbanSquare,
   Mic,
   Camera,
+  ChevronRight,
 } from "lucide-react";
 import { getProfileDataAction, updateProfileDataAction, ProfileData } from "@/app/actions/profile";
+import { calculateTotalExperience } from "@/components/dashboard/experience-timeline";
 import { useToast } from "@/hooks/use-toast";
 
 function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -56,6 +59,7 @@ interface ProfileModalProps {
 }
 
 export function ProfileModal({ open, onOpenChange, initialUser }: ProfileModalProps) {
+  const router = useRouter();
   const { toast } = useToast();
   const [isPending, startTransition] = useTransition();
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -180,6 +184,42 @@ export function ProfileModal({ open, onOpenChange, initialUser }: ProfileModalPr
               </div>
             </div>
           )}
+
+          {/* Experience Timeline Banner Link */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                <Briefcase size={15} />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
+                  Experience Timeline
+                  {profile?.experience && profile.experience.length > 0 && (
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 font-normal">
+                      {calculateTotalExperience(profile.experience)}
+                    </Badge>
+                  )}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {profile?.experience && profile.experience.length > 0
+                    ? `${profile.experience.length} position${profile.experience.length === 1 ? "" : "s"} on your LinkedIn-style timeline`
+                    : "Add work history & achievements like LinkedIn"}
+                </p>
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              type="button"
+              onClick={() => {
+                onOpenChange(false);
+                router.push("/profile");
+              }}
+              className="text-xs h-7 gap-1"
+            >
+              Manage <ChevronRight size={12} />
+            </Button>
+          </div>
 
           {/* Form Fields */}
           <div className="space-y-4">
