@@ -28,6 +28,8 @@ export interface ProfileData {
   website: string | null;
   linkedin: string | null;
   github: string | null;
+  username: string | null;
+  isPublic: boolean;
   experience: ExperienceItem[];
   stats: {
     resumesCount: number;
@@ -35,6 +37,23 @@ export interface ProfileData {
     applicationsCount: number;
     interviewsCount: number;
   };
+}
+
+export interface PublicProfileData {
+  id: string;
+  name: string;
+  image: string | null;
+  headline: string | null;
+  bio: string | null;
+  website: string | null;
+  linkedin: string | null;
+  github: string | null;
+  username: string | null;
+  experience: ExperienceItem[];
+  primaryRole?: string | null;
+  skills: string[];
+  resumeDownloadUrl?: string | null;
+  resumeName?: string | null;
 }
 
 export function sortExperiences(items: ExperienceItem[]): ExperienceItem[] {
@@ -105,6 +124,8 @@ export async function getProfileDataAction(): Promise<{
         website: dbUser.profile?.website || null,
         linkedin: dbUser.profile?.linkedin || null,
         github: dbUser.profile?.github || null,
+        username: dbUser.profile?.username || null,
+        isPublic: dbUser.profile?.isPublic ?? true,
         experience: sortExperiences(parsedExperience),
         stats: {
           resumesCount: dbUser._count.resumes,
@@ -128,6 +149,8 @@ export async function updateProfileDataAction(data: {
   linkedin?: string;
   github?: string;
   image?: string;
+  username?: string;
+  isPublic?: boolean;
   experience?: ExperienceItem[];
 }): Promise<{
   success: boolean;
@@ -138,6 +161,35 @@ export async function updateProfileDataAction(data: {
     const user = await getCurrentUser();
     if (!user) {
       return { success: false, error: "Unauthorized" };
+    }
+
+    let sanitizedUsername: string | undefined = undefined;
+    if (data.username !== undefined) {
+      const trimmed = data.username.trim().toLowerCase();
+      if (trimmed.length > 0) {
+        if (!/^[a-z0-9_-]{3,30}$/.test(trimmed)) {
+          return {
+            success: false,
+            error: "Username must be 3-30 characters and contain only lowercase letters, numbers, hyphens, and underscores.",
+          };
+        }
+        // Check uniqueness
+        const existing = await prisma.profile.findFirst({
+          where: {
+            username: trimmed,
+            NOT: { userId: user.id },
+          },
+        });
+        if (existing) {
+          return {
+            success: false,
+            error: `The handle "${trimmed}" is already claimed. Please pick another.`,
+          };
+        }
+        sanitizedUsername = trimmed;
+      } else {
+        sanitizedUsername = undefined;
+      }
     }
 
     // Update user table
@@ -163,6 +215,8 @@ export async function updateProfileDataAction(data: {
         website: data.website?.trim() || null,
         linkedin: data.linkedin?.trim() || null,
         github: data.github?.trim() || null,
+        username: sanitizedUsername || null,
+        isPublic: data.isPublic !== undefined ? data.isPublic : true,
         experience: experienceJson || null,
       },
       update: {
@@ -171,6 +225,8 @@ export async function updateProfileDataAction(data: {
         website: data.website !== undefined ? data.website.trim() || null : undefined,
         linkedin: data.linkedin !== undefined ? data.linkedin.trim() || null : undefined,
         github: data.github !== undefined ? data.github.trim() || null : undefined,
+        username: data.username !== undefined ? sanitizedUsername || null : undefined,
+        isPublic: data.isPublic !== undefined ? data.isPublic : undefined,
         ...(experienceJson !== undefined && { experience: experienceJson }),
       },
     });
@@ -178,6 +234,9 @@ export async function updateProfileDataAction(data: {
     revalidatePath("/", "layout");
     revalidatePath("/profile");
     revalidatePath("/dashboard");
+    if (updatedProfile.username) {
+      revalidatePath(`/p/${updatedProfile.username}`);
+    }
 
     let parsedExp: ExperienceItem[] = [];
     if (updatedProfile.experience) {
@@ -200,12 +259,118 @@ export async function updateProfileDataAction(data: {
         website: updatedProfile.website,
         linkedin: updatedProfile.linkedin,
         github: updatedProfile.github,
+        username: updatedProfile.username,
+        isPublic: updatedProfile.isPublic,
         experience: sortExperiences(parsedExp),
       },
     };
   } catch (error) {
     console.error("Error updating profile:", error);
     return { success: false, error: "Failed to update profile" };
+  }
+}
+
+export async function getPublicProfileByUsernameAction(
+  identifier: string
+): Promise<{
+  success: boolean;
+  profile?: PublicProfileData;
+  error?: string;
+}> {
+  try {
+    if (!identifier) {
+      return { success: false, error: "Username or user ID is required" };
+    }
+
+    const clean = identifier.trim().toLowerCase();
+
+    // Find profile by username OR userId
+    const profile = await prisma.profile.findFirst({
+      where: {
+        OR: [{ username: clean }, { userId: identifier }],
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+            resumes: {
+              where: { isPrimary: true },
+              take: 1,
+              select: {
+                name: true,
+                fileUrl: true,
+                targetRole: true,
+                tags: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!profile) {
+      return { success: false, error: "Candidate profile not found." };
+    }
+
+    if (!profile.isPublic) {
+      return {
+        success: false,
+        error: "This candidate has marked their portfolio as private.",
+      };
+    }
+
+    let parsedExp: ExperienceItem[] = [];
+    if (profile.experience) {
+      try {
+        const raw = JSON.parse(profile.experience);
+        if (Array.isArray(raw)) parsedExp = raw;
+      } catch {
+        parsedExp = [];
+      }
+    }
+
+    // Extract consolidated skills from experiences + primary resume
+    const skillsSet = new Set<string>();
+    parsedExp.forEach((exp) => {
+      if (exp.skills && Array.isArray(exp.skills)) {
+        exp.skills.forEach((s) => skillsSet.add(s.trim()));
+      }
+    });
+
+    const primaryResume = profile.user.resumes?.[0];
+    if (primaryResume?.tags) {
+      try {
+        const tags = JSON.parse(primaryResume.tags);
+        if (Array.isArray(tags)) tags.forEach((t: string) => skillsSet.add(t.trim()));
+      } catch {
+        // fallback
+      }
+    }
+
+    return {
+      success: true,
+      profile: {
+        id: profile.user.id,
+        name: profile.user.name || "Candidate",
+        image: profile.user.image,
+        headline: profile.headline,
+        bio: profile.bio,
+        website: profile.website,
+        linkedin: profile.linkedin,
+        github: profile.github,
+        username: profile.username,
+        experience: sortExperiences(parsedExp),
+        primaryRole: primaryResume?.targetRole || null,
+        skills: Array.from(skillsSet).filter(Boolean),
+        resumeDownloadUrl: primaryResume?.fileUrl || null,
+        resumeName: primaryResume?.name || null,
+      },
+    };
+  } catch (error) {
+    console.error("Error fetching public profile:", error);
+    return { success: false, error: "Failed to load public portfolio" };
   }
 }
 
