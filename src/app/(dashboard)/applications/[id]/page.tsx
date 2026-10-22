@@ -1,12 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Building, MapPin, Calendar, Clock, Edit2, Play, FileText, CheckCircle2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Building,
+  MapPin,
+  Calendar,
+  Clock,
+  Edit2,
+  Play,
+  FileText,
+  CheckCircle2,
+  Send,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { OutreachModal } from "@/components/dashboard/outreach-modal";
 
 // Mock Data
 const mockApp = {
@@ -30,6 +44,7 @@ const mockApp = {
 
 export default function ApplicationDetailPage() {
   const params = useParams();
+  const [outreachOpen, setOutreachOpen] = useState(false);
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
@@ -53,9 +68,16 @@ export default function ApplicationDetailPage() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline"><Edit2 className="mr-2 h-4 w-4" /> Edit</Button>
-          <Button>Update Status</Button>
+        <div className="flex items-center gap-2">
+          <Button
+            onClick={() => setOutreachOpen(true)}
+            className="gap-1.5 shadow-sm bg-primary text-primary-foreground text-xs h-9 px-3.5"
+          >
+            <Sparkles size={14} /> Pitch Founder / Lead
+          </Button>
+          <Button variant="outline" size="sm" className="text-xs h-9">
+            <Edit2 className="mr-1.5 h-3.5 w-3.5" /> Edit
+          </Button>
         </div>
       </div>
 
@@ -117,6 +139,37 @@ export default function ApplicationDetailPage() {
             </CardContent>
           </Card>
 
+          {/* Direct Founder & Recruiter Outreach Card (Aarivi Autopilot) */}
+          <Card className="border-primary/25 bg-gradient-to-r from-primary/5 via-card to-background shadow-xs">
+            <CardHeader className="pb-3 border-b border-border/40">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-7 w-7 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                    <Send size={14} />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base font-bold">Direct Founder &amp; Recruiter Outreach</CardTitle>
+                    <CardDescription className="text-xs">Bypass ATS queues with tailored high-converting cold email &amp; InMail drafts.</CardDescription>
+                  </div>
+                </div>
+                <Badge variant="outline" className="text-[10px] text-primary border-primary/30">Autopilot</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Generate 3 custom pitches (Founder Cold Email, Tech Lead InMail, and a 280-char LinkedIn Note) highlighting your relevant projects and public portfolio.
+              </p>
+              <Button
+                size="sm"
+                onClick={() => setOutreachOpen(true)}
+                className="gap-1.5 shrink-0 text-xs shadow-xs"
+              >
+                <Sparkles size={13} />
+                Draft Outreach
+              </Button>
+            </CardContent>
+          </Card>
+
           {/* AI Interview Coach Prompt */}
           <Card className="bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900 overflow-hidden relative">
             <div className="absolute right-0 top-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10" />
@@ -160,6 +213,14 @@ export default function ApplicationDetailPage() {
           </Card>
         </div>
       </div>
+
+      <OutreachModal
+        open={outreachOpen}
+        onOpenChange={setOutreachOpen}
+        applicationId={params?.id as string}
+        companyName={mockApp.company}
+        roleTitle={mockApp.position}
+      />
     </div>
   );
 }
