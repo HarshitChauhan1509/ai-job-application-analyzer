@@ -30,6 +30,8 @@ model Profile {
   id         String   @id @default(cuid())
   userId     String   @unique
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  username   String?  @unique
+  isPublic   Boolean  @default(true)
   headline   String?
   bio        String?
   website    String?
