@@ -21,7 +21,11 @@ import {
   ExternalLink,
   ShieldCheck,
   CheckCircle2,
+  Copy,
+  Check,
+  Share2,
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { updateProfileDataAction, ProfileData } from "@/app/actions/profile";
 import { ExperienceTimeline } from "@/components/dashboard/experience-timeline";
 import { useToast } from "@/hooks/use-toast";
@@ -55,6 +59,24 @@ export default function ProfileClient({ initialProfile }: { initialProfile: Prof
   const [website, setWebsite] = useState(initialProfile.website || "");
   const [linkedin, setLinkedin] = useState(initialProfile.linkedin || "");
   const [github, setGithub] = useState(initialProfile.github || "");
+  const [username, setUsername] = useState(initialProfile.username || "");
+  const [isPublic, setIsPublic] = useState(initialProfile.isPublic ?? true);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    const slug = username || initialProfile.id;
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const url = `${origin}/p/${slug}`;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(url);
+    }
+    setCopied(true);
+    toast({
+      title: "Portfolio Link Copied",
+      description: "Share this public portfolio link with founders, hiring managers, or on your resume.",
+    });
+    setTimeout(() => setCopied(false), 2500);
+  };
 
   const handleSave = () => {
     startTransition(async () => {
@@ -65,6 +87,8 @@ export default function ProfileClient({ initialProfile }: { initialProfile: Prof
         website,
         linkedin,
         github,
+        username,
+        isPublic,
       });
 
       if (res.success) {
@@ -167,6 +191,90 @@ export default function ProfileClient({ initialProfile }: { initialProfile: Prof
                 <Mic size={13} className="text-rose-500" /> Mock Sessions
               </p>
             </Link>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Public Shareable Portfolio Card (Aarivi-style) */}
+      <Card className="border-primary/25 bg-gradient-to-br from-primary/5 via-card to-background shadow-xs overflow-hidden">
+        <CardContent className="p-4 sm:p-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 text-primary shrink-0" />
+                <h3 className="text-sm font-bold text-foreground">Public Shareable Portfolio</h3>
+                <Badge
+                  variant={isPublic ? "default" : "secondary"}
+                  className={`text-[10px] py-0 px-2 font-semibold ${
+                    isPublic
+                      ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {isPublic ? "Public & Active" : "Private"}
+                </Badge>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Recruiters and founders can view your verified work history, skills radar, and achievements at your personalized link.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyLink}
+                className="text-xs h-8 gap-1.5 bg-background shadow-xs hover:bg-muted"
+              >
+                {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                {copied ? "Copied Link" : "Copy Public Link"}
+              </Button>
+
+              <Link
+                href={`/p/${username || initialProfile.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Button size="sm" className="text-xs h-8 gap-1.5 rounded-md shadow-xs">
+                  <ExternalLink size={13} /> View Live Portfolio
+                </Button>
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-border/50 text-xs">
+            <div className="space-y-1.5">
+              <Label htmlFor="custom-username" className="text-xs font-semibold text-foreground">
+                Custom Portfolio Handle
+              </Label>
+              <div className="flex items-center rounded-md border border-input bg-background/80 h-8 px-2 text-xs focus-within:ring-1 focus-within:ring-primary">
+                <span className="text-muted-foreground select-none font-mono text-[11px]">/p/</span>
+                <input
+                  id="custom-username"
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
+                  placeholder={initialProfile.id.substring(0, 10)}
+                  className="w-full bg-transparent outline-none pl-1 text-xs font-medium text-foreground placeholder:text-muted-foreground/50"
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                Lowercase letters, numbers, hyphens, and underscores (3–30 characters).
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0">
+              <div className="flex items-center gap-2 bg-muted/30 p-2.5 rounded-lg border border-border/50">
+                <Checkbox
+                  id="toggle-public"
+                  checked={isPublic}
+                  onCheckedChange={(checked) => setIsPublic(Boolean(checked))}
+                />
+                <Label htmlFor="toggle-public" className="text-xs font-medium cursor-pointer select-none">
+                  Make portfolio publicly visible to anyone with the link
+                </Label>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
