@@ -5,12 +5,13 @@ import React, { useState, useEffect } from "react";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building, MapPin, MoreHorizontal, Calendar, ArrowRight, Search } from "lucide-react";
+import { Building, MapPin, MoreHorizontal, Calendar, ArrowRight, Search, Send } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { updateApplicationStatusAction } from "@/app/actions/application";
 import { formatDate } from "@/lib/format-date";
+import { OutreachModal } from "@/components/dashboard/outreach-modal";
 
 // Mock data types
 type Application = {
@@ -47,6 +48,7 @@ const COLUMN_ORDER = ["SAVED", "APPLIED", "SCREENING", "INTERVIEW", "OFFER", "RE
 
 export function KanbanBoard({ initialApplications = [] }: { initialApplications?: Record<string, any>[] }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [outreachApp, setOutreachApp] = useState<Application | null>(null);
   const [data, setData] = useState<BoardData>(() => {
     const apps: Record<string, Application> = {};
     const cols = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
@@ -252,11 +254,25 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
                                       <Calendar size={12} />
                                       {app.date}
                                     </div>
-                                    <Link href={`/dashboard/applications/${app.id}`}>
-                                      <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-primary font-medium">
-                                        Details <ArrowRight size={12} />
-                                      </div>
-                                    </Link>
+                                    <div className="flex items-center gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          e.preventDefault();
+                                          setOutreachApp(app);
+                                        }}
+                                        className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-[11px] font-medium text-muted-foreground hover:text-primary px-1.5 py-0.5 rounded hover:bg-muted"
+                                        title="Generate founder/recruiter cold pitch"
+                                      >
+                                        <Send size={11} /> Pitch
+                                      </button>
+                                      <Link href={`/dashboard/applications/${app.id}`}>
+                                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-primary font-medium">
+                                          Details <ArrowRight size={12} />
+                                        </div>
+                                      </Link>
+                                    </div>
                                   </div>
                                 </CardContent>
                               </Card>
@@ -274,6 +290,16 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
         })}
       </div>
     </DragDropContext>
+
+    {outreachApp && (
+      <OutreachModal
+        open={Boolean(outreachApp)}
+        onOpenChange={(open) => !open && setOutreachApp(null)}
+        applicationId={outreachApp.id}
+        companyName={outreachApp.company}
+        roleTitle={outreachApp.position}
+      />
+    )}
     </div>
   );
 }
