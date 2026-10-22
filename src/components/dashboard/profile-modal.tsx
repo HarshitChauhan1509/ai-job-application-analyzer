@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ import {
   Mic,
   Camera,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import { getProfileDataAction, updateProfileDataAction, ProfileData } from "@/app/actions/profile";
 import { calculateTotalExperience } from "@/components/dashboard/experience-timeline";
@@ -207,18 +209,32 @@ export function ProfileModal({ open, onOpenChange, initialUser }: ProfileModalPr
                 </p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              type="button"
-              onClick={() => {
-                onOpenChange(false);
-                router.push("/profile");
-              }}
-              className="text-xs h-7 gap-1"
-            >
-              Manage <ChevronRight size={12} />
-            </Button>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {profile?.username && (
+                <Link
+                  href={`/p/${profile.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => onOpenChange(false)}
+                >
+                  <Button variant="ghost" size="sm" className="text-xs h-7 gap-1 text-primary hover:bg-primary/10">
+                    <ExternalLink size={12} /> Portfolio
+                  </Button>
+                </Link>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                type="button"
+                onClick={() => {
+                  onOpenChange(false);
+                  router.push("/profile");
+                }}
+                className="text-xs h-7 gap-1"
+              >
+                Manage <ChevronRight size={12} />
+              </Button>
+            </div>
           </div>
 
           {/* Form Fields */}
