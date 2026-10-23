@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { updateApplicationStatusAction } from "@/app/actions/application";
 import { formatDate } from "@/lib/format-date";
 import { OutreachModal } from "@/components/dashboard/outreach-modal";
+import { QuickEmailLogDialog } from "@/components/dashboard/quick-email-log-dialog";
 
 // Mock data types
 type Application = {
@@ -163,27 +164,33 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
 
   return (
     <div className="space-y-4">
-      {/* Kanban Search Filter */}
-      <div className="flex items-center justify-between gap-3 max-w-sm">
-        <div className="relative w-full">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Filter pipeline by company or position..."
-            className="pl-9 h-9 text-xs bg-card"
-          />
+      {/* Kanban Toolbar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2 w-full sm:max-w-md">
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Filter pipeline by company or position..."
+              className="pl-9 h-9 text-xs bg-card"
+            />
+          </div>
+          {searchQuery && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSearchQuery("")}
+              className="text-xs h-9 px-2 text-muted-foreground"
+            >
+              Clear
+            </Button>
+          )}
         </div>
-        {searchQuery && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setSearchQuery("")}
-            className="text-xs h-9 px-2 text-muted-foreground"
-          >
-            Clear
-          </Button>
-        )}
+
+        <div className="flex items-center gap-2">
+          <QuickEmailLogDialog />
+        </div>
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
