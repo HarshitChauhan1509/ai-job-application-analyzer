@@ -19,12 +19,14 @@ import {
   Moon,
   Laptop,
   User,
+  Flame,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logoutUserAction } from "@/app/actions/auth";
 
 const navItems = [
   { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Explore Startups", href: "/jobs/explore", icon: Flame },
   { name: "Resumes", href: "/resumes", icon: FileText },
   { name: "Jobs", href: "/jobs", icon: Bookmark },
   { name: "Applications", href: "/applications", icon: KanbanSquare },
