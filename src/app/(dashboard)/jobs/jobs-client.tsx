@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +24,7 @@ import {
   Clock,
   Send,
   Search,
+  Flame,
   FileText,
   ListChecks,
   Layers,
@@ -504,25 +506,33 @@ export default function JobsClient({
             Import from JD links or text, extract requirements, and assess your fit.
           </p>
         </div>
-        <Button
-          onClick={() => {
-            setIsAdding(!isAdding);
-            setProtectionNotice(null);
-          }}
-          className="w-full sm:w-auto shadow-xs shrink-0"
-        >
-          {isAdding ? (
-            <>
-              <X className="mr-2 h-4 w-4" />
-              Close Form
-            </>
-          ) : (
-            <>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Job from Link or Text
-            </>
-          )}
-        </Button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
+          <Link href="/jobs/explore" className="w-full sm:w-auto">
+            <Button variant="outline" className="w-full gap-1.5 border-dashed">
+              <Flame className="h-4 w-4 text-primary" />
+              Explore Curated Startups
+            </Button>
+          </Link>
+          <Button
+            onClick={() => {
+              setIsAdding(!isAdding);
+              setProtectionNotice(null);
+            }}
+            className="w-full sm:w-auto shadow-xs"
+          >
+            {isAdding ? (
+              <>
+                <X className="mr-2 h-4 w-4" />
+                Close Form
+              </>
+            ) : (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Job from Link or Text
+              </>
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Add Job Form / Card */}
