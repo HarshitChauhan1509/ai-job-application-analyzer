@@ -80,8 +80,8 @@ model ResumeAnalysis {
 
 model Job {
   id                    String   @id @default(cuid())
-  userId                String
-  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId                String?
+  user                  User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   company               String
   position              String
   description           String
@@ -89,6 +89,11 @@ model Job {
   location              String?
   employmentType        String?
   experienceRequirement String?
+  isCurated             Boolean  @default(false)
+  startupStage          String?  // Seed, Series A, Series B, Growth, Public
+  salaryRange           String?  // e.g. "$140k - $185k • 0.1% - 0.25%"
+  department            String?  // Frontend, Backend, Fullstack, AI / ML, DevOps
+  logoUrl               String?
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
