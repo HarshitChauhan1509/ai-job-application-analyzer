@@ -24,9 +24,18 @@ import {
   Copy,
   Check,
   Share2,
+  Star,
+  GitFork,
+  FolderGit2,
 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { updateProfileDataAction, ProfileData } from "@/app/actions/profile";
+import {
+  updateProfileDataAction,
+  fetchGitHubRepositoriesAction,
+  savePinnedGitHubProjectsAction,
+  ProfileData,
+} from "@/app/actions/profile";
+import { GitHubRepoItem } from "@/lib/github";
 import { ExperienceTimeline } from "@/components/dashboard/experience-timeline";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
@@ -62,6 +71,95 @@ export default function ProfileClient({ initialProfile }: { initialProfile: Prof
   const [username, setUsername] = useState(initialProfile.username || "");
   const [isPublic, setIsPublic] = useState(initialProfile.isPublic ?? true);
   const [copied, setCopied] = useState(false);
+
+  // GitHub Proof-of-Work Showcase state
+  const [pinnedProjects, setPinnedProjects] = useState<GitHubRepoItem[]>(initialProfile.githubProjects || []);
+  const [availableRepos, setAvailableRepos] = useState<GitHubRepoItem[]>(initialProfile.githubProjects || []);
+  const [isFetchingRepos, setIsFetchingRepos] = useState(false);
+  const [isSavingRepos, setIsSavingRepos] = useState(false);
+
+  const handleFetchRepos = async () => {
+    if (!github.trim()) {
+      toast({
+        title: "GitHub Handle Required",
+        description: "Please enter your GitHub profile handle or URL below first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsFetchingRepos(true);
+    try {
+      const res = await fetchGitHubRepositoriesAction(github);
+      if (!res.success || !res.repositories) {
+        toast({
+          title: "Failed to Fetch Repositories",
+          description: res.error || "Could not load public GitHub repositories.",
+          variant: "destructive",
+        });
+        return;
+      }
+      setAvailableRepos(res.repositories);
+      if (pinnedProjects.length === 0) {
+        // Automatically pre-select top 4 repos
+        setPinnedProjects(res.repositories.slice(0, 4));
+      }
+      toast({
+        title: "Repositories Loaded! ⚡",
+        description: `Found ${res.repositories.length} public repos. Select your top projects to pin to your portfolio and outreach pitch.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to communicate with GitHub.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsFetchingRepos(false);
+    }
+  };
+
+  const togglePinRepo = (repo: GitHubRepoItem) => {
+    if (pinnedProjects.some((p) => p.id === repo.id)) {
+      setPinnedProjects(pinnedProjects.filter((p) => p.id !== repo.id));
+    } else {
+      if (pinnedProjects.length >= 6) {
+        toast({
+          title: "Pin Limit Reached",
+          description: "You can pin a maximum of 6 featured repositories.",
+        });
+        return;
+      }
+      setPinnedProjects([...pinnedProjects, repo]);
+    }
+  };
+
+  const handleSavePinnedRepos = async () => {
+    setIsSavingRepos(true);
+    try {
+      const res = await savePinnedGitHubProjectsAction(pinnedProjects);
+      if (!res.success) {
+        toast({
+          title: "Save Failed",
+          description: res.error || "Could not save pinned projects.",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Showcase Saved! 🚀",
+        description: `Saved ${pinnedProjects.length} featured GitHub projects to your public portfolio and cold outreach pitches.`,
+      });
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to save projects.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingRepos(false);
+    }
+  };
 
   const handleCopyLink = () => {
     const slug = username || initialProfile.id;
@@ -276,6 +374,139 @@ export default function ProfileClient({ initialProfile }: { initialProfile: Prof
               </div>
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* GitHub Proof-of-Work & Projects Showcase (Aarivi-style) */}
+      <Card className="border-border/60 shadow-xs">
+        <CardHeader className="pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
+              <FolderGit2 size={16} />
+            </div>
+            <div>
+              <CardTitle className="text-sm sm:text-base font-bold flex items-center gap-2">
+                GitHub Proof of Work &amp; Project Showcase
+                <Badge variant="outline" className="text-[10px] py-0 px-2 font-medium bg-primary/5 text-primary border-primary/20">
+                  {pinnedProjects.length} Pinned
+                </Badge>
+              </CardTitle>
+              <CardDescription className="text-xs">
+                Sync your public GitHub repositories to display proof-of-work on your public portfolio and automatically ground AI outreach pitches in your real builds.
+              </CardDescription>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFetchRepos}
+              disabled={isFetchingRepos}
+              className="text-xs h-8 gap-1.5"
+            >
+              {isFetchingRepos ? <Loader2 size={13} className="animate-spin" /> : <GithubIcon />}
+              {isFetchingRepos ? "Fetching Repos..." : "Sync from GitHub"}
+            </Button>
+            {availableRepos.length > 0 && (
+              <Button
+                size="sm"
+                onClick={handleSavePinnedRepos}
+                disabled={isSavingRepos}
+                className="text-xs h-8 gap-1.5"
+              >
+                {isSavingRepos ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
+                Save Pinned ({pinnedProjects.length})
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4 pt-1">
+          {availableRepos.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border/80 bg-muted/20 p-6 text-center space-y-2">
+              <FolderGit2 className="h-8 w-8 text-muted-foreground mx-auto opacity-50" />
+              <p className="text-xs font-medium text-foreground">No repositories loaded yet</p>
+              <p className="text-[11px] text-muted-foreground max-w-sm mx-auto">
+                Make sure your GitHub handle is saved in your profile links below, then click &quot;Sync from GitHub&quot; to fetch your repositories.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleFetchRepos}
+                disabled={isFetchingRepos}
+                className="text-xs h-8 gap-1.5 mt-2"
+              >
+                <GithubIcon /> Sync from GitHub
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                <span>Select up to 6 repositories to showcase on your portfolio and cold pitch:</span>
+                <span className="font-semibold text-foreground">{pinnedProjects.length} / 6 pinned</span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[380px] overflow-y-auto p-1">
+                {availableRepos.map((repo) => {
+                  const isPinned = pinnedProjects.some((p) => p.id === repo.id);
+                  return (
+                    <div
+                      key={repo.id}
+                      onClick={() => togglePinRepo(repo)}
+                      className={`p-3.5 rounded-xl border text-xs cursor-pointer transition-all flex flex-col justify-between space-y-2 ${
+                        isPinned
+                          ? "border-primary bg-primary/5 ring-1 ring-primary/20 shadow-xs"
+                          : "border-border/70 hover:bg-muted/40 hover:border-border"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              checked={isPinned}
+                              onCheckedChange={() => togglePinRepo(repo)}
+                              className="h-3.5 w-3.5"
+                            />
+                            <span className="font-bold text-foreground hover:text-primary transition-colors truncate">
+                              {repo.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {repo.stars > 0 && (
+                              <span className="flex items-center gap-0.5 text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
+                                <Star size={11} className="fill-amber-500 text-amber-500" />
+                                {repo.stars}
+                              </span>
+                            )}
+                            {repo.forks > 0 && (
+                              <span className="flex items-center gap-0.5 text-[11px] text-muted-foreground">
+                                <GitFork size={11} />
+                                {repo.forks}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {repo.description && (
+                          <p className="text-[11px] text-muted-foreground line-clamp-2 mt-1.5 leading-relaxed pl-5">
+                            {repo.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-border/40 text-[10px] text-muted-foreground pl-5">
+                        <span className="font-medium text-foreground/80">{repo.language || "TypeScript"}</span>
+                        {repo.homepage && (
+                          <span className="text-primary truncate max-w-[150px]">{repo.homepage}</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
