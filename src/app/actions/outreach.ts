@@ -96,12 +96,21 @@ export async function generateOutreachPitchAction(params: {
       ? `https://careerpilot.app/p/${profile.id}`
       : null;
 
+    const candidateProjects = (profile?.githubProjects || []).map((p) => ({
+      name: p.name,
+      description: p.description,
+      language: p.language,
+      stars: p.stars,
+      url: p.url,
+    }));
+
     const pitches = await generateOutreachPitches({
       candidateName: user.name || profile?.name || "Candidate",
       candidateHeadline: profile?.headline,
       candidateBio: profile?.bio,
       candidateSkills: Array.from(new Set(candidateSkills)),
       candidateExperience: profile?.experience || [],
+      candidateProjects,
       companyName: company,
       roleTitle: role,
       jobDescription: jdText,
