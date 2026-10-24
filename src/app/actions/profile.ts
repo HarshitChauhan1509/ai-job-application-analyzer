@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { GitHubRepoItem, fetchPublicGitHubRepos } from "@/lib/github";
 
 export interface ExperienceItem {
   id: string;
@@ -28,6 +29,7 @@ export interface ProfileData {
   website: string | null;
   linkedin: string | null;
   github: string | null;
+  githubProjects?: GitHubRepoItem[];
   username: string | null;
   isPublic: boolean;
   experience: ExperienceItem[];
@@ -48,6 +50,7 @@ export interface PublicProfileData {
   website: string | null;
   linkedin: string | null;
   github: string | null;
+  githubProjects?: GitHubRepoItem[];
   username: string | null;
   experience: ExperienceItem[];
   primaryRole?: string | null;
@@ -112,6 +115,16 @@ export async function getProfileDataAction(): Promise<{
       }
     }
 
+    let parsedGithubProjects: GitHubRepoItem[] = [];
+    if (dbUser.profile?.githubProjects) {
+      try {
+        const raw = JSON.parse(dbUser.profile.githubProjects);
+        if (Array.isArray(raw)) parsedGithubProjects = raw;
+      } catch {
+        parsedGithubProjects = [];
+      }
+    }
+
     return {
       success: true,
       profile: {
@@ -124,6 +137,7 @@ export async function getProfileDataAction(): Promise<{
         website: dbUser.profile?.website || null,
         linkedin: dbUser.profile?.linkedin || null,
         github: dbUser.profile?.github || null,
+        githubProjects: parsedGithubProjects,
         username: dbUser.profile?.username || null,
         isPublic: dbUser.profile?.isPublic ?? true,
         experience: sortExperiences(parsedExperience),
@@ -148,6 +162,7 @@ export async function updateProfileDataAction(data: {
   website?: string;
   linkedin?: string;
   github?: string;
+  githubProjects?: GitHubRepoItem[];
   image?: string;
   username?: string;
   isPublic?: boolean;
@@ -215,6 +230,7 @@ export async function updateProfileDataAction(data: {
         website: data.website?.trim() || null,
         linkedin: data.linkedin?.trim() || null,
         github: data.github?.trim() || null,
+        githubProjects: data.githubProjects ? JSON.stringify(data.githubProjects) : null,
         username: sanitizedUsername || null,
         isPublic: data.isPublic !== undefined ? data.isPublic : true,
         experience: experienceJson || null,
@@ -225,6 +241,9 @@ export async function updateProfileDataAction(data: {
         website: data.website !== undefined ? data.website.trim() || null : undefined,
         linkedin: data.linkedin !== undefined ? data.linkedin.trim() || null : undefined,
         github: data.github !== undefined ? data.github.trim() || null : undefined,
+        ...(data.githubProjects !== undefined && {
+          githubProjects: data.githubProjects ? JSON.stringify(data.githubProjects) : null,
+        }),
         username: data.username !== undefined ? sanitizedUsername || null : undefined,
         isPublic: data.isPublic !== undefined ? data.isPublic : undefined,
         ...(experienceJson !== undefined && { experience: experienceJson }),
@@ -331,6 +350,26 @@ export async function getPublicProfileByUsernameAction(
       }
     }
 
+    let parsedGithubProjects: GitHubRepoItem[] = [];
+    if (profile.githubProjects) {
+      try {
+        const raw = JSON.parse(profile.githubProjects);
+        if (Array.isArray(raw)) parsedGithubProjects = raw;
+      } catch {
+        parsedGithubProjects = [];
+      }
+    }
+
+    // Auto-fetch top repositories if candidate has GitHub linked but hasn't customized pins
+    if (parsedGithubProjects.length === 0 && profile.github) {
+      try {
+        const liveRepos = await fetchPublicGitHubRepos(profile.github);
+        parsedGithubProjects = liveRepos.slice(0, 6);
+      } catch {
+        // graceful fallback to empty
+      }
+    }
+
     // Extract consolidated skills from experiences + primary resume
     const skillsSet = new Set<string>();
     parsedExp.forEach((exp) => {
@@ -360,6 +399,7 @@ export async function getPublicProfileByUsernameAction(
         website: profile.website,
         linkedin: profile.linkedin,
         github: profile.github,
+        githubProjects: parsedGithubProjects,
         username: profile.username,
         experience: sortExperiences(parsedExp),
         primaryRole: primaryResume?.targetRole || null,
@@ -593,5 +633,93 @@ export async function importExperienceFromResumeAction(
   } catch (error) {
     console.error("Error importing experience from resume:", error);
     return { success: false, error: "Failed to import experience" };
+  }
+}
+
+/**
+ * Fetch public GitHub repositories for the authenticated user or given username/URL
+ */
+export async function fetchGitHubRepositoriesAction(githubHandle?: string): Promise<{
+  success: boolean;
+  repositories?: GitHubRepoItem[];
+  username?: string;
+  error?: string;
+}> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    let handle = githubHandle?.trim();
+    if (!handle) {
+      const dbProfile = await prisma.profile.findUnique({
+        where: { userId: user.id },
+      });
+      handle = dbProfile?.github || undefined;
+    }
+
+    if (!handle) {
+      return {
+        success: false,
+        error: "Please enter your GitHub username or profile link first.",
+      };
+    }
+
+    const repositories = await fetchPublicGitHubRepos(handle);
+    return {
+      success: true,
+      repositories,
+      username: handle,
+    };
+  } catch (error: any) {
+    console.error("Error in fetchGitHubRepositoriesAction:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to fetch GitHub repositories",
+    };
+  }
+}
+
+/**
+ * Save user's selected/pinned GitHub projects to their profile
+ */
+export async function savePinnedGitHubProjectsAction(projects: GitHubRepoItem[]): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  try {
+    const serialized = JSON.stringify(projects);
+
+    const profile = await prisma.profile.upsert({
+      where: { userId: user.id },
+      create: {
+        userId: user.id,
+        githubProjects: serialized,
+      },
+      update: {
+        githubProjects: serialized,
+      },
+    });
+
+    revalidatePath("/profile");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/profile");
+    if (profile.username) {
+      revalidatePath(`/p/${profile.username}`);
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error saving pinned GitHub projects:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to save pinned repositories",
+    };
   }
 }
