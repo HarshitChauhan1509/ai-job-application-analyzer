@@ -36,8 +36,9 @@ model Profile {
   bio        String?
   website    String?
   linkedin   String?
-  github     String?
-  experience String?  // Stored as JSON string array of Experience objects
+  github         String?
+  githubProjects String?  // Stored as JSON string array of GitHub project showcase objects
+  experience     String?  // Stored as JSON string array of Experience objects
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
