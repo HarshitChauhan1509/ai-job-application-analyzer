@@ -19,6 +19,9 @@ import {
   Code2,
   Layers,
   ArrowRight,
+  Star,
+  GitFork,
+  FolderGit2,
 } from "lucide-react";
 
 function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
@@ -257,6 +260,110 @@ export default async function PublicPortfolioPage({
                   >
                     {skill}
                   </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Proof of Work / Featured Open-Source Projects */}
+        {profile.githubProjects && profile.githubProjects.length > 0 && (
+          <Card className="border-border/70 shadow-xs">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 rounded-md bg-primary/10 text-primary flex items-center justify-center">
+                  <FolderGit2 size={15} />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-bold">Proof of Work &amp; Open Source</CardTitle>
+                  <p className="text-xs text-muted-foreground">Public repositories and featured software builds</p>
+                </div>
+              </div>
+              {profile.github && (
+                <a
+                  href={profile.github.startsWith("http") ? profile.github : `https://${profile.github}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+                >
+                  <GithubIcon />
+                  <span>View GitHub</span>
+                  <ExternalLink size={10} />
+                </a>
+              )}
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {profile.githubProjects.map((repo) => (
+                  <div
+                    key={repo.id}
+                    className="p-4 rounded-xl border border-border/70 bg-card hover:border-primary/40 hover:shadow-xs transition-all flex flex-col justify-between space-y-3"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <a
+                          href={repo.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-bold text-sm hover:text-primary transition-colors flex items-center gap-1.5"
+                        >
+                          <FolderGit2 size={14} className="text-muted-foreground shrink-0" />
+                          <span className="truncate">{repo.name}</span>
+                          <ExternalLink size={11} className="text-muted-foreground shrink-0" />
+                        </a>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {repo.stars > 0 && (
+                            <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400">
+                              <Star size={11} className="fill-amber-500 text-amber-500" />
+                              {repo.stars}
+                            </span>
+                          )}
+                          {repo.forks > 0 && (
+                            <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                              <GitFork size={11} />
+                              {repo.forks}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {repo.description && (
+                        <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2 leading-relaxed">
+                          {repo.description}
+                        </p>
+                      )}
+
+                      {repo.topics && repo.topics.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-2.5">
+                          {repo.topics.slice(0, 3).map((topic, i) => (
+                            <span
+                              key={i}
+                              className="text-[10px] font-medium bg-muted/70 text-foreground px-1.5 py-0.5 rounded border border-border/40"
+                            >
+                              #{topic}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-border/40 text-[11px] text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full bg-primary" />
+                        <span className="font-medium text-foreground/80">{repo.language || "TypeScript"}</span>
+                      </div>
+                      {repo.homepage && (
+                        <a
+                          href={repo.homepage.startsWith("http") ? repo.homepage : `https://${repo.homepage}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline flex items-center gap-1 font-medium"
+                        >
+                          <Globe size={11} /> Live Demo
+                        </a>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             </CardContent>
