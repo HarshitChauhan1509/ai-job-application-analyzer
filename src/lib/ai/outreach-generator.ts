@@ -1,6 +1,14 @@
 import { openai } from "./client";
 import { ExperienceItem } from "@/app/actions/profile";
 
+export interface CandidateProjectBrief {
+  name: string;
+  description?: string | null;
+  language?: string | null;
+  stars?: number;
+  url?: string;
+}
+
 export interface OutreachPitchResult {
   founderPitch: {
     subject: string;
@@ -25,6 +33,7 @@ export async function generateOutreachPitches(params: {
   candidateBio?: string | null;
   candidateSkills?: string[];
   candidateExperience?: ExperienceItem[];
+  candidateProjects?: CandidateProjectBrief[];
   companyName: string;
   roleTitle: string;
   jobDescription?: string;
@@ -37,6 +46,7 @@ export async function generateOutreachPitches(params: {
     candidateBio,
     candidateSkills = [],
     candidateExperience = [],
+    candidateProjects = [],
     companyName,
     roleTitle,
     jobDescription = "",
@@ -64,8 +74,10 @@ export async function generateOutreachPitches(params: {
       Candidate Headline: "${candidateHeadline || "Full Stack Engineer & Builder"}"
       Candidate Background: "${candidateBio || "Experienced software engineer specializing in scalable web systems."}"
       Top Skills: "${skillsStr}"
-      Recent Experience / Projects:
-      ${recentRoles || "Proven track record of building production web applications and APIs."}
+      Featured GitHub / Proof-of-Work Projects:
+      ${candidateProjects.length > 0 ? candidateProjects.map((p) => `- ${p.name} (${p.language || "Code"}): ${p.description || "Production build"} [${p.stars || 0} stars]`).join("\n") : "Proven track record of building production web applications and APIs."}
+      Recent Experience:
+      ${recentRoles || "Solid engineering delivery across startups and production teams."}
       Portfolio Link: "${portfolioUrl || ""}"
 
       Target Company: "${companyName}"
@@ -142,6 +154,9 @@ export async function generateOutreachPitches(params: {
 
   // High-converting heuristic templates
   const portfolioText = portfolioUrl ? `\n\nYou can review my interactive portfolio & recent builds here: ${portfolioUrl}` : "";
+  const projectProof = candidateProjects.length > 0
+    ? ` In my project "${candidateProjects[0].name}" (${candidateProjects[0].language || "TypeScript"}), I engineered a real-world system addressing similar architectural demands.`
+    : "";
   const firstName = candidateName.split(" ")[0] || "there";
 
   const founderSubject = `${roleTitle} @ ${companyName} — quick question on your stack`;
@@ -149,7 +164,7 @@ export async function generateOutreachPitches(params: {
 
 I've been following what you're building at ${companyName} and love your team's focus on high-impact product execution.
 
-As a ${candidateHeadline || roleTitle} with deep experience in ${skillsStr.split(",").slice(0, 3).join(", ")}, I've recently engineered systems solving similar scaling challenges—including reducing latency and delivering production-ready features.${portfolioText}
+As a ${candidateHeadline || roleTitle} with deep experience in ${skillsStr.split(",").slice(0, 3).join(", ")}, I've recently engineered systems solving similar scaling challenges—including reducing latency and delivering production-ready features.${projectProof}${portfolioText}
 
 Would you be open to a brief 10-minute chat this Thursday or Friday to discuss where your engineering team is headed?
 
