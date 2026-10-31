@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { parseApplicationEmail, ParsedEmailResult, EmailStage } from "@/lib/ai/email-parser";
+import { hasEnoughCredits, deductCredits, CREDIT_COSTS } from "@/lib/credits";
 
 export interface ParseEmailResponse {
   success: boolean;
@@ -131,6 +132,15 @@ export async function applyParsedEmailAction(params: {
     return { success: false, error: "Unauthorized" };
   }
 
+  // Verify credit balance
+  const creditCheck = await hasEnoughCredits(user.id, CREDIT_COSTS.EMAIL_PARSER);
+  if (!creditCheck.hasEnough) {
+    return {
+      success: false,
+      error: `Insufficient AI credits (${creditCheck.currentBalance} left). Syncing recruiter emails requires ${CREDIT_COSTS.EMAIL_PARSER} credits. Please upgrade or top up.`,
+    };
+  }
+
   const { applicationId, parsedData, createNewIfNoMatch } = params;
 
   try {
@@ -176,6 +186,15 @@ export async function applyParsedEmailAction(params: {
         },
       });
 
+      // Deduct credits and log to ledger
+      await deductCredits({
+        userId: user.id,
+        amount: CREDIT_COSTS.EMAIL_PARSER,
+        action: "EMAIL_PARSER",
+        description: `Updated pipeline for ${existing.job.company} (${previousStatus} ➔ ${newStatus})`,
+      });
+
+      revalidatePath("/", "layout");
       revalidatePath("/dashboard");
       revalidatePath("/applications");
       revalidatePath(`/applications/${applicationId}`);
@@ -225,6 +244,15 @@ export async function applyParsedEmailAction(params: {
         },
       });
 
+      // Deduct credits and log to ledger
+      await deductCredits({
+        userId: user.id,
+        amount: CREDIT_COSTS.EMAIL_PARSER,
+        action: "EMAIL_PARSER",
+        description: `Created new application from recruiter email for ${company}`,
+      });
+
+      revalidatePath("/", "layout");
       revalidatePath("/dashboard");
       revalidatePath("/applications");
       revalidatePath("/jobs");
