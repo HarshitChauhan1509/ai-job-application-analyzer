@@ -67,6 +67,17 @@ export async function getCurrentUser() {
               github: true,
             },
           },
+          credit: {
+            select: {
+              balance: true,
+            },
+          },
+          subscription: {
+            select: {
+              plan: true,
+              status: true,
+            },
+          },
         },
       });
       if (user) return user;
@@ -96,6 +107,17 @@ export async function getCurrentUser() {
               github: true,
             },
           },
+          credit: {
+            select: {
+              balance: true,
+            },
+          },
+          subscription: {
+            select: {
+              plan: true,
+              status: true,
+            },
+          },
         },
       });
 
@@ -114,6 +136,17 @@ export async function getCurrentUser() {
                 website: true,
                 linkedin: true,
                 github: true,
+              },
+            },
+            credit: {
+              select: {
+                balance: true,
+              },
+            },
+            subscription: {
+              select: {
+                plan: true,
+                status: true,
               },
             },
           },
