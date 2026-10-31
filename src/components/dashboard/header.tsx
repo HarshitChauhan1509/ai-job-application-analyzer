@@ -2,6 +2,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
   Bell, 
@@ -14,7 +15,8 @@ import {
   Sparkles, 
   MessageSquare,
   ChevronRight,
-  ExternalLink 
+  ExternalLink,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -62,6 +64,16 @@ export function Header({ user }: { user?: any }) {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* AI Credits Pill */}
+          <Link
+            href="/pricing"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/15 border border-primary/20 text-xs font-semibold text-primary transition-colors cursor-pointer"
+            title="AI Credits Available • Click to view upgrade plans"
+          >
+            <Zap size={13} className="fill-primary" />
+            <span>{user?.credit?.balance ?? 50} Credits</span>
+          </Link>
+
           {/* Theme Toggle option */}
           <ThemeToggle />
 
@@ -100,8 +112,8 @@ export function Header({ user }: { user?: any }) {
                       <p className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">
                         {user?.name || "Candidate"}
                       </p>
-                      <Badge variant="secondary" className="text-[10px] font-semibold py-0 px-1 bg-primary/10 text-primary border-0">
-                        Pro
+                      <Badge variant="secondary" className="text-[10px] font-semibold py-0 px-1 bg-primary/10 text-primary border-0 uppercase">
+                        {user?.subscription?.plan || "Free"}
                       </Badge>
                     </div>
                     <p className="text-[11px] text-muted-foreground truncate">{user?.email || "harshit@gmail.com"}</p>
@@ -110,6 +122,19 @@ export function Header({ user }: { user?: any }) {
                   <ChevronRight size={14} className="text-muted-foreground group-hover:translate-x-0.5 transition-transform shrink-0" />
                 </div>
               </button>
+
+              <DropdownMenuItem
+                onClick={() => router.push("/pricing")}
+                className="cursor-pointer flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
+                  <span>Plans &amp; Credits</span>
+                </div>
+                <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                  {user?.credit?.balance ?? 50} left
+                </span>
+              </DropdownMenuItem>
 
               <DropdownMenuItem
                 onClick={() => setProfileModalOpen(true)}
