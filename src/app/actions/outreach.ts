@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { getProfileDataAction } from "./profile";
 import { generateOutreachPitches, OutreachPitchResult } from "@/lib/ai/outreach-generator";
+import { hasEnoughCredits, deductCredits, CREDIT_COSTS } from "@/lib/credits";
+import { revalidatePath } from "next/cache";
 
 export async function generateOutreachPitchAction(params: {
   applicationId?: string;
@@ -22,6 +24,15 @@ export async function generateOutreachPitchAction(params: {
     const user = await getCurrentUser();
     if (!user) {
       return { success: false, error: "Unauthorized" };
+    }
+
+    // Verify candidate has sufficient AI credits
+    const creditCheck = await hasEnoughCredits(user.id, CREDIT_COSTS.OUTREACH_PITCH);
+    if (!creditCheck.hasEnough) {
+      return {
+        success: false,
+        error: `Insufficient AI credits (${creditCheck.currentBalance} left). Generating founder pitches requires ${CREDIT_COSTS.OUTREACH_PITCH} credits. Please upgrade or top up.`,
+      };
     }
 
     let company = params.companyName?.trim() || "";
@@ -117,6 +128,17 @@ export async function generateOutreachPitchAction(params: {
       recipientName: params.recipientName,
       portfolioUrl,
     });
+
+    // Deduct credits and log to ledger
+    await deductCredits({
+      userId: user.id,
+      amount: CREDIT_COSTS.OUTREACH_PITCH,
+      action: "OUTREACH_PITCH",
+      description: `Generated founder & lead outreach pitches for ${company}`,
+    });
+
+    revalidatePath("/", "layout");
+    revalidatePath("/applications");
 
     return {
       success: true,
