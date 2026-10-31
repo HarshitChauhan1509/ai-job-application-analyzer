@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { openai } from "@/lib/ai/client";
+import { hasEnoughCredits, deductCredits, CREDIT_COSTS } from "@/lib/credits";
 
 export interface CopilotMessage {
   role: "user" | "assistant";
@@ -25,6 +26,15 @@ export async function sendCopilotMessageAction(params: {
   const userQuery = params.message?.trim();
   if (!userQuery) {
     return { success: false, error: "Message cannot be empty." };
+  }
+
+  // Check if candidate has credits for copilot
+  const creditCheck = await hasEnoughCredits(user.id, CREDIT_COSTS.COPILOT_MESSAGE);
+  if (!creditCheck.hasEnough) {
+    return {
+      success: false,
+      error: `Insufficient AI credits (${creditCheck.currentBalance} left). Copilot queries require ${CREDIT_COSTS.COPILOT_MESSAGE} credit. Please upgrade your plan.`,
+    };
   }
 
   try {
@@ -105,6 +115,12 @@ GUIDELINES:
 
       const reply = response.choices[0]?.message?.content?.trim();
       if (reply) {
+        await deductCredits({
+          userId: user.id,
+          amount: CREDIT_COSTS.COPILOT_MESSAGE,
+          action: "COPILOT_MESSAGE",
+          description: `Copilot response for: "${userQuery.slice(0, 30)}..."`,
+        });
         return { success: true, reply };
       }
     }
@@ -116,6 +132,13 @@ GUIDELINES:
       skills: skillsList,
       pipelineCount: applications.length,
       trackedCompanies,
+    });
+
+    await deductCredits({
+      userId: user.id,
+      amount: CREDIT_COSTS.COPILOT_MESSAGE,
+      action: "COPILOT_MESSAGE",
+      description: `Copilot response for: "${userQuery.slice(0, 30)}..."`,
     });
 
     return { success: true, reply: fallbackReply };
