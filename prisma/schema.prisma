@@ -24,6 +24,9 @@ model User {
   interviewSessions InterviewSession[]
   aiConversations   AIConversation[]
   notifications     Notification[]
+  subscription      Subscription?
+  paymentOrders     PaymentOrder[]
+  credit            UserCredit?
 }
 
 model Profile {
@@ -219,4 +222,70 @@ model Notification {
   isRead    Boolean  @default(false)
   link      String?
   createdAt DateTime @default(now())
+}
+
+model Subscription {
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  user               User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan               String    @default("FREE") // FREE, PRO, LIFETIME
+  status             String    @default("ACTIVE") // ACTIVE, TRIALING, PAST_DUE, CANCELED, UNPAID
+  provider           String    @default("STRIPE") // STRIPE, DODO, RAZORPAY, LEMON_SQUEEZY
+  customerId         String?   // Provider customer identifier
+  subscriptionId     String?   @unique // Provider subscription identifier
+  priceId            String?   // Provider plan/price identifier
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime?
+  cancelAtPeriodEnd  Boolean   @default(false)
+  canceledAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([customerId])
+  @@index([subscriptionId])
+}
+
+model PaymentOrder {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider   String   @default("STRIPE")
+  orderId    String   @unique // Provider checkout session or order identifier
+  paymentId  String?  // Provider payment intent or charge identifier
+  amount     Int      // Amount in smallest unit (e.g., cents or paise)
+  currency   String   @default("USD")
+  plan       String   // PRO, LIFETIME
+  status     String   @default("PENDING") // PENDING, COMPLETED, FAILED, REFUNDED
+  receiptUrl String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([orderId])
+}
+
+model UserCredit {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance     Int      @default(50) // Free tier initial allocation
+  totalEarned Int      @default(50)
+  totalSpent  Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  transactions CreditLedger[]
+}
+
+model CreditLedger {
+  id           String     @id @default(cuid())
+  userCreditId String
+  userCredit   UserCredit @relation(fields: [userCreditId], references: [id], onDelete: Cascade)
+  amount       Int        // Positive for credit add, negative for deduction
+  balanceAfter Int
+  action       String     // OUTREACH_PITCH, RESUME_ANALYSIS, EMAIL_PARSER, MONTHLY_REFRESH, PLAN_PURCHASE
+  description  String?
+  createdAt    DateTime   @default(now())
+
+  @@index([userCreditId])
 }
