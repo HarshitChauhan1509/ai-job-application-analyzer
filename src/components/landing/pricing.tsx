@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { Check, Sparkles, ArrowRight, ShieldCheck, Zap } from "lucide-react";
+import { Check, Sparkles, ArrowRight, ShieldCheck, Zap, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import Link from "next/link";
+import { createCheckoutSessionAction } from "@/app/actions/billing";
 
 interface PricingPlan {
   name: string;
@@ -80,8 +82,46 @@ const plans: PricingPlan[] = [
   },
 ];
 
-export function Pricing() {
+export function Pricing({ user }: { user?: any } = {}) {
+  const router = useRouter();
   const [annualBilling, setAnnualBilling] = useState(true);
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const currentPlan = user?.subscription?.plan || (user ? "FREE" : null);
+
+  const handlePlanAction = async (plan: PricingPlan) => {
+    if (!user) {
+      router.push(plan.href);
+      return;
+    }
+
+    if (plan.name === "Starter") {
+      router.push("/dashboard");
+      return;
+    }
+
+    const targetPlan: "PRO" | "LIFETIME" = plan.name === "Lifetime Pass" ? "LIFETIME" : "PRO";
+
+    try {
+      setLoadingPlan(targetPlan);
+      setErrorMsg(null);
+      const res = await createCheckoutSessionAction({
+        plan: targetPlan,
+        isAnnual: annualBilling,
+      });
+
+      if (res.success && res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
+      } else {
+        setErrorMsg(res.error || "Unable to initialize checkout session.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to start checkout.");
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
 
   return (
     <section id="pricing" className="py-24 bg-muted/20 relative overflow-hidden">
@@ -198,17 +238,74 @@ export function Pricing() {
                   </CardContent>
 
                   <CardFooter className="pt-4 pb-8">
-                    <Link href={plan.href} className="w-full">
-                      <Button
-                        className={`w-full rounded-full h-11 text-sm font-semibold transition-all ${
-                          plan.popular
-                            ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:bg-primary/90"
-                            : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
-                        }`}
-                      >
-                        {plan.cta} <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </Link>
+                    {(() => {
+                      const isCurrentPlan =
+                        (plan.name === "Starter" && currentPlan === "FREE") ||
+                        (plan.name === "Pro Copilot" && currentPlan === "PRO") ||
+                        (plan.name === "Lifetime Pass" && currentPlan === "LIFETIME");
+
+                      const targetKey =
+                        plan.name === "Lifetime Pass" ? "LIFETIME" : "PRO";
+
+                      const isLoading = loadingPlan === targetKey;
+
+                      if (!user) {
+                        return (
+                          <Link href={plan.href} className="w-full">
+                            <Button
+                              className={`w-full rounded-full h-11 text-sm font-semibold transition-all ${
+                                plan.popular
+                                  ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:bg-primary/90"
+                                  : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+                              }`}
+                            >
+                              {plan.cta} <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          </Link>
+                        );
+                      }
+
+                      if (isCurrentPlan) {
+                        return (
+                          <Link href="/dashboard/billing" className="w-full">
+                            <Button
+                              variant="outline"
+                              className="w-full rounded-full h-11 text-sm font-semibold border-primary/40 text-primary hover:bg-primary/10"
+                            >
+                              Current Plan &rarr;
+                            </Button>
+                          </Link>
+                        );
+                      }
+
+                      return (
+                        <Button
+                          onClick={() => handlePlanAction(plan)}
+                          disabled={isLoading}
+                          className={`w-full rounded-full h-11 text-sm font-semibold transition-all ${
+                            plan.popular
+                              ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:bg-primary/90"
+                              : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border"
+                          }`}
+                        >
+                          {isLoading ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Redirecting to Checkout...
+                            </>
+                          ) : (
+                            <>
+                              {plan.name === "Starter"
+                                ? "Go to Dashboard"
+                                : plan.name === "Lifetime Pass"
+                                ? "Get Lifetime Pass"
+                                : "Upgrade to Pro"}
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </>
+                          )}
+                        </Button>
+                      );
+                    })()}
                   </CardFooter>
                 </Card>
               </motion.div>
