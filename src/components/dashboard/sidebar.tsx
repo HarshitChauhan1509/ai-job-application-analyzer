@@ -20,6 +20,7 @@ import {
   Laptop,
   User,
   Flame,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logoutUserAction } from "@/app/actions/auth";
@@ -33,6 +34,7 @@ const navItems = [
   { name: "AI Coach", href: "/coach", icon: MessageSquare },
   { name: "Resume Improver", href: "/improve", icon: Sparkles },
   { name: "Profile", href: "/profile", icon: User },
+  { name: "Billing & Credits", href: "/dashboard/billing", icon: CreditCard },
 ];
 
 export function Sidebar({ className }: { className?: string } = {}) {
