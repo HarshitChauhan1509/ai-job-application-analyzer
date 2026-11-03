@@ -66,9 +66,9 @@ export function Header({ user }: { user?: any }) {
         <div className="flex items-center gap-2 sm:gap-3">
           {/* AI Credits Pill */}
           <Link
-            href="/pricing"
+            href="/dashboard/billing"
             className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary/10 hover:bg-primary/15 border border-primary/20 text-xs font-semibold text-primary transition-colors cursor-pointer"
-            title="AI Credits Available • Click to view upgrade plans"
+            title="AI Credits Available • Click to manage billing & upgrade plans"
           >
             <Zap size={13} className="fill-primary" />
             <span>{user?.credit?.balance ?? 50} Credits</span>
@@ -124,12 +124,12 @@ export function Header({ user }: { user?: any }) {
               </button>
 
               <DropdownMenuItem
-                onClick={() => router.push("/pricing")}
+                onClick={() => router.push("/dashboard/billing")}
                 className="cursor-pointer flex items-center justify-between"
               >
                 <div className="flex items-center gap-2">
                   <Zap className="h-4 w-4 text-amber-500 fill-amber-500" />
-                  <span>Plans &amp; Credits</span>
+                  <span>Billing &amp; Credits</span>
                 </div>
                 <span className="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                   {user?.credit?.balance ?? 50} left
