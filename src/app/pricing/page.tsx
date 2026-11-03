@@ -12,7 +12,7 @@ export default async function PricingPage() {
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary/20">
       <Navbar user={user} />
       <main className="flex-1 pt-16">
-        <Pricing />
+        <Pricing user={user} />
 
         {/* Bottom CTA */}
         <section className="py-20 border-t border-border/40 bg-foreground text-background relative overflow-hidden">
