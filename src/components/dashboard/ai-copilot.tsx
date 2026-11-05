@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { sendCopilotMessageAction, CopilotMessage } from "@/app/actions/copilot";
+import { LowCreditsModal } from "@/components/credits/low-credits-modal";
 
 const QUICK_PROMPTS = [
   "💼 How do I negotiate startup equity vs base salary?",
@@ -40,6 +41,7 @@ export function AICopilot() {
     },
   ]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [lowCreditsOpen, setLowCreditsOpen] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -72,11 +74,15 @@ export function AICopilot() {
       if (res.success && res.reply) {
         setMessages([...newMessages, { role: "assistant", content: res.reply }]);
       } else {
-        toast({
-          title: "Copilot Error",
-          description: res.error || "Could not retrieve response from Copilot.",
-          variant: "destructive",
-        });
+        if (res.error?.toLowerCase().includes("credit") || res.error?.toLowerCase().includes("balance")) {
+          setLowCreditsOpen(true);
+        } else {
+          toast({
+            title: "Copilot Error",
+            description: res.error || "Could not retrieve response from Copilot.",
+            variant: "destructive",
+          });
+        }
       }
     } catch (err: any) {
       toast({
@@ -329,6 +335,13 @@ export function AICopilot() {
           </div>
         </div>
       )}
+
+      <LowCreditsModal
+        open={lowCreditsOpen}
+        onOpenChange={setLowCreditsOpen}
+        actionName="AI Copilot Message"
+        requiredCredits={1}
+      />
     </>
   );
 }
