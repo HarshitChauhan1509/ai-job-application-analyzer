@@ -31,6 +31,7 @@ import {
   ParseEmailResponse,
 } from "@/app/actions/email-parser";
 import { ParsedEmailResult } from "@/lib/ai/email-parser";
+import { LowCreditsModal } from "@/components/credits/low-credits-modal";
 
 const SAMPLE_EMAILS = [
   {
@@ -63,6 +64,7 @@ export function QuickEmailLogDialog() {
 
   const { toast } = useToast();
   const router = useRouter();
+  const [lowCreditsOpen, setLowCreditsOpen] = useState(false);
 
   const handleReset = () => {
     setEmailText("");
@@ -130,11 +132,15 @@ export function QuickEmailLogDialog() {
       });
 
       if (!res.success) {
-        toast({
-          title: "Update Failed",
-          description: res.error || "Could not update your application status.",
-          variant: "destructive",
-        });
+        if (res.error?.toLowerCase().includes("credit") || res.error?.toLowerCase().includes("balance")) {
+          setLowCreditsOpen(true);
+        } else {
+          toast({
+            title: "Update Failed",
+            description: res.error || "Could not update your application status.",
+            variant: "destructive",
+          });
+        }
         setIsApplying(false);
         return;
       }
@@ -448,6 +454,13 @@ export function QuickEmailLogDialog() {
         )}
       </DialogContent>
     </Dialog>
+
+    <LowCreditsModal
+      open={lowCreditsOpen}
+      onOpenChange={setLowCreditsOpen}
+      actionName="AI Email Status Parser"
+      requiredCredits={2}
+    />
     </>
   );
 }
