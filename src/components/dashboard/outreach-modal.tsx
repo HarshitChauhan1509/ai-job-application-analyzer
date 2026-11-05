@@ -31,6 +31,7 @@ import {
 import { generateOutreachPitchAction } from "@/app/actions/outreach";
 import { OutreachPitchResult } from "@/lib/ai/outreach-generator";
 import { useToast } from "@/hooks/use-toast";
+import { LowCreditsModal } from "@/components/credits/low-credits-modal";
 
 function LinkedinIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -78,6 +79,7 @@ export function OutreachModal({
   const [linkedInText, setLinkedInText] = useState("");
 
   const [copied, setCopied] = useState(false);
+  const [lowCreditsOpen, setLowCreditsOpen] = useState(false);
 
   // Generate pitches when modal opens if not generated yet
   useEffect(() => {
@@ -104,11 +106,15 @@ export function OutreachModal({
         setRecruiterBody(res.pitches.hiringManagerPitch.body);
         setLinkedInText(res.pitches.linkedInNote.text);
       } else {
-        toast({
-          variant: "destructive",
-          title: "Generation Failed",
-          description: res.error || "Could not generate pitches.",
-        });
+        if (res.error?.toLowerCase().includes("credit") || res.error?.toLowerCase().includes("balance")) {
+          setLowCreditsOpen(true);
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Generation Failed",
+            description: res.error || "Could not generate pitches.",
+          });
+        }
       }
     });
   };
@@ -424,6 +430,13 @@ export function OutreachModal({
           </div>
         </DialogFooter>
       </DialogContent>
+
+      <LowCreditsModal
+        open={lowCreditsOpen}
+        onOpenChange={setLowCreditsOpen}
+        actionName="Founder Outreach Pitch"
+        requiredCredits={3}
+      />
     </Dialog>
   );
 }
