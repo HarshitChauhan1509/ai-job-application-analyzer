@@ -7,7 +7,8 @@ import {
   getGoogleOAuthAuthUrl,
   isGoogleOAuthConfigured,
 } from "@/lib/email-sync/google-oauth";
-import { MailboxConnectionInfo } from "@/lib/email-sync/types";
+import { scanConnectedMailbox } from "@/lib/email-sync/gmail-scanner";
+import { MailboxConnectionInfo, MailboxSyncResult } from "@/lib/email-sync/types";
 
 /**
  * Retrieves the current user's email connection status.
@@ -175,6 +176,42 @@ export async function disconnectMailboxAction(): Promise<{
     return {
       success: false,
       error: error.message || "Failed to disconnect mailbox.",
+    };
+  }
+}
+
+/**
+ * Triggers a scan of the candidate's connected mailbox to discover job updates.
+ */
+export async function scanAndSyncMailboxAction(): Promise<MailboxSyncResult> {
+  const user = await getCurrentUser();
+  if (!user) {
+    return {
+      success: false,
+      error: "Unauthorized. Please log in.",
+      emailsScanned: 0,
+      jobEmailsFound: 0,
+      autoUpdatedCount: 0,
+      discoveredEmails: [],
+    };
+  }
+
+  try {
+    const result = await scanConnectedMailbox(user.id);
+
+    revalidatePath("/applications");
+    revalidatePath("/dashboard");
+
+    return result;
+  } catch (error: any) {
+    console.error("Error in scanAndSyncMailboxAction:", error);
+    return {
+      success: false,
+      error: error.message || "Failed to sync mailbox.",
+      emailsScanned: 0,
+      jobEmailsFound: 0,
+      autoUpdatedCount: 0,
+      discoveredEmails: [],
     };
   }
 }
