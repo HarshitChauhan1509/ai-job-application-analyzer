@@ -27,6 +27,8 @@ model User {
   subscription      Subscription?
   paymentOrders     PaymentOrder[]
   credit            UserCredit?
+  emailConnection   EmailConnection?
+  syncedEmails      SyncedEmailLog[]
 }
 
 model Profile {
@@ -133,6 +135,7 @@ model Application {
   updatedAt DateTime @updatedAt
 
   events ApplicationEvent[]
+  syncedEmails SyncedEmailLog[]
 }
 
 model ApplicationEvent {
@@ -288,4 +291,49 @@ model CreditLedger {
   createdAt    DateTime   @default(now())
 
   @@index([userCreditId])
+}
+
+model EmailConnection {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider      String    @default("GOOGLE") // GOOGLE, OUTLOOK
+  email         String    // Connected inbox address (e.g., candidate@gmail.com)
+  accessToken   String?   // OAuth access token
+  refreshToken  String?   // OAuth refresh token for background queries
+  expiresAt     DateTime?
+  syncStatus    String    @default("CONNECTED") // CONNECTED, SYNCING, ERROR, DISCONNECTED
+  lastSyncedAt  DateTime?
+  lastHistoryId String?   // Gmail historyId for delta syncs
+  errorMessage  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  logs          SyncedEmailLog[]
+
+  @@index([userId])
+  @@index([email])
+}
+
+model SyncedEmailLog {
+  id            String           @id @default(cuid())
+  userId        String
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  connectionId  String?
+  connection    EmailConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  applicationId String?
+  application   Application?     @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  messageId     String           @unique // Gmail or provider message ID to avoid duplicate processing
+  sender        String
+  subject       String
+  company       String?
+  role          String?
+  detectedStage String?          // APPLIED, SCREENING, INTERVIEW, OFFER, REJECTED
+  actionTaken   String           // AUTO_UPDATED, SUGGESTED, IGNORED
+  receivedAt    DateTime
+  createdAt     DateTime         @default(now())
+
+  @@index([userId])
+  @@index([messageId])
+  @@index([applicationId])
 }
