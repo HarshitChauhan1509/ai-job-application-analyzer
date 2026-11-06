@@ -13,6 +13,7 @@ import { updateApplicationStatusAction } from "@/app/actions/application";
 import { formatDate } from "@/lib/format-date";
 import { OutreachModal } from "@/components/dashboard/outreach-modal";
 import { QuickEmailLogDialog } from "@/components/dashboard/quick-email-log-dialog";
+import { MailboxSyncDialog } from "@/components/dashboard/mailbox-sync-dialog";
 
 // Mock data types
 type Application = {
@@ -189,6 +190,7 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
         </div>
 
         <div className="flex items-center gap-2">
+          <MailboxSyncDialog />
           <QuickEmailLogDialog />
         </div>
       </div>
