@@ -36,6 +36,7 @@ import {
   deleteInterviewSessionAction,
 } from "@/app/actions/interview";
 import { formatDate } from "@/lib/format-date";
+import { LowCreditsModal } from "@/components/credits/low-credits-modal";
 
 interface SavedJob {
   id: string;
@@ -79,6 +80,7 @@ export default function InterviewCoachSetupPage() {
 
   const [isStarting, setIsStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lowCreditsOpen, setLowCreditsOpen] = useState(false);
 
   // Past Sessions Modal
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -177,7 +179,11 @@ export default function InterviewCoachSetupPage() {
         // Navigates directly to /coach/session?sessionId=...
         router.push(`/coach/session?sessionId=${res.sessionId}`);
       } else {
-        setError(res.error || "Failed to initialize interview session");
+        if (res.error?.toLowerCase().includes("credit") || res.error?.toLowerCase().includes("balance")) {
+          setLowCreditsOpen(true);
+        } else {
+          setError(res.error || "Failed to initialize interview session");
+        }
         setIsStarting(false);
       }
     } catch (err) {
@@ -571,6 +577,13 @@ export default function InterviewCoachSetupPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <LowCreditsModal
+        open={lowCreditsOpen}
+        onOpenChange={setLowCreditsOpen}
+        actionName="Mock Interview Practice Session"
+        requiredCredits={10}
+      />
     </div>
   );
 }
