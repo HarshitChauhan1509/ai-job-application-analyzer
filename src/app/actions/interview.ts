@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { generateInterviewQuestions, evaluateInterviewAnswer } from "@/lib/ai/interview-coach";
+import { hasEnoughCredits, deductCredits, CREDIT_COSTS } from "@/lib/credits";
 
 async function getAuthenticatedUser() {
   const user = await getCurrentUser();
@@ -71,6 +72,16 @@ export async function createInterviewSessionAction(input: CreateInterviewSession
 
     const { role, difficulty, numQuestions = 3, categories = ["General"], jobId } = input;
 
+    // Credit Balance Verification
+    const creditCost = CREDIT_COSTS.MOCK_INTERVIEW || 10;
+    const creditCheck = await hasEnoughCredits(user.id, creditCost);
+    if (!creditCheck.hasEnough) {
+      return {
+        success: false,
+        error: `Insufficient AI credits. You need ${creditCost} credits to start an interview session, but only have ${creditCheck.currentBalance} credits remaining.`,
+      };
+    }
+
     let jobContext: string | undefined;
     if (jobId) {
       const job = await prisma.job.findUnique({
@@ -110,6 +121,14 @@ export async function createInterviewSessionAction(input: CreateInterviewSession
           orderBy: { orderIndex: "asc" },
         },
       },
+    });
+
+    // Deduct AI credits for the mock interview session
+    await deductCredits({
+      userId: user.id,
+      amount: creditCost,
+      action: "MOCK_INTERVIEW",
+      description: `Mock Interview practice session: ${role} (${difficulty})`,
     });
 
     revalidatePath("/coach");
