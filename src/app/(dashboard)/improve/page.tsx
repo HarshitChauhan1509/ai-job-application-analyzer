@@ -34,6 +34,7 @@ import {
   CuratedSampleBullet,
 } from "@/app/actions/resume-improver";
 import { ImprovementAction, BulletVariation, BulletAnalysis } from "@/lib/ai/resume-improver";
+import { LowCreditsModal } from "@/components/credits/low-credits-modal";
 
 interface SavedBulletItem {
   id: string;
@@ -70,6 +71,7 @@ export default function ImproveResumePage() {
   // Saved bullets collection (stored in localStorage for fast retrieval)
   const [savedBullets, setSavedBullets] = useState<SavedBulletItem[]>([]);
   const [showSavedModal, setShowSavedModal] = useState(false);
+  const [lowCreditsOpen, setLowCreditsOpen] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -140,6 +142,10 @@ export default function ImproveResumePage() {
         setVariations(res.data.variations);
         if (res.data.variations.length > 0) {
           setSelectedVariationId(res.data.variations[0].id);
+        }
+      } else {
+        if (res.error?.toLowerCase().includes("credit") || res.error?.toLowerCase().includes("balance")) {
+          setLowCreditsOpen(true);
         }
       }
     } catch (err) {
@@ -751,6 +757,13 @@ export default function ImproveResumePage() {
           )}
         </div>
       </div>
+
+      <LowCreditsModal
+        open={lowCreditsOpen}
+        onOpenChange={setLowCreditsOpen}
+        actionName="AI Resume Bullet Improver"
+        requiredCredits={2}
+      />
     </div>
   );
 }
