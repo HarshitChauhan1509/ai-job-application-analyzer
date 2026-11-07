@@ -9,6 +9,7 @@ import {
   MultiVariationOutput,
   BulletAnalysis,
 } from "@/lib/ai/resume-improver";
+import { hasEnoughCredits, deductCredits } from "@/lib/credits";
 
 async function getAuthenticatedUser() {
   const user = await getCurrentUser();
@@ -171,10 +172,24 @@ export async function improveBulletMultiAction(params: {
   customJobContext?: string;
 }): Promise<{ success: boolean; data?: MultiVariationOutput; error?: string }> {
   try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return { success: false, error: "Authentication required" };
+    }
+
     const { originalBullet, action, jobId, customJobContext } = params;
 
     if (!originalBullet || originalBullet.trim().length < 5) {
       return { success: false, error: "Please enter a valid bullet point to improve" };
+    }
+
+    // Verify credits (2 credits required)
+    const creditCheck = await hasEnoughCredits(user.id, 2);
+    if (!creditCheck.hasEnough) {
+      return {
+        success: false,
+        error: `Insufficient AI credits. You need 2 credits to improve a resume bullet, but only have ${creditCheck.currentBalance} credits remaining.`,
+      };
     }
 
     let jobContext = customJobContext?.trim() || "";
@@ -189,6 +204,15 @@ export async function improveBulletMultiAction(params: {
     }
 
     const result = await improveResumeBulletMulti(originalBullet.trim(), action, jobContext);
+
+    // Deduct credits
+    await deductCredits({
+      userId: user.id,
+      amount: 2,
+      action: "RESUME_ANALYSIS",
+      description: `Resume bullet improvement (${action})`,
+    });
+
     return { success: true, data: result };
   } catch (error) {
     console.error("Error in improveBulletMultiAction:", error);
