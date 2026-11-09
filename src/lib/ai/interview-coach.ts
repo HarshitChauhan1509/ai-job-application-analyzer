@@ -126,6 +126,7 @@ function fallbackInterviewEvaluation(role: string, question: string, answer: str
       "Observability and monitoring strategies in production",
     ],
     idealStructure: "1. Clarify constraints -> 2. Propose high-level design -> 3. Drill into trade-offs and edge cases -> 4. Summarize with quantifiable outcomes.",
+    modelAnswer: `In my previous role, our team addressed this directly. Situation: We observed latency degradation during peak traffic. Task: I was responsible for diagnosing bottlenecks and proposing a scalable solution. Action: I implemented database connection pooling, introduced Redis cache-aside caching, and optimized critical queries with composite indexes. Result: We reduced p99 latency by 64% and supported 3x traffic growth with zero downtime.`,
     followUpQuestion: `How would your proposed strategy scale if traffic or data volume multiplied by 10x?`,
   };
 }
@@ -222,6 +223,7 @@ export async function evaluateInterviewAnswer(
               "weaknesses": ["Lacks concrete examples"],
               "missingConcepts": ["Database indexing"],
               "idealStructure": "Start with the problem, explain the options...",
+              "modelAnswer": "In my previous project, we faced a similar scaling demand. Situation: ... Task: ... Action: ... Result: ...",
               "followUpQuestion": "How would this change if read volume increased 100x?"
             }`,
           },
