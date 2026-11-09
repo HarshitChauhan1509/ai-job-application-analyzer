@@ -76,6 +76,7 @@ export const InterviewEvaluationSchema = z.object({
   weaknesses: z.array(z.string()).describe("Areas where the answer fell short"),
   missingConcepts: z.array(z.string()).describe("Important concepts or keywords the candidate failed to mention"),
   idealStructure: z.string().describe("A brief outline of how a perfect answer would be structured (e.g., STAR method)"),
+  modelAnswer: z.string().optional().describe("A comprehensive benchmark model answer demonstrating how a Senior/Staff Engineer would structure the response with STAR metrics"),
   followUpQuestion: z.string().nullable().describe("A potential follow-up question the interviewer might ask based on this answer"),
 });
 
