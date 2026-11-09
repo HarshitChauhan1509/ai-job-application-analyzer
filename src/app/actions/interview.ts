@@ -173,6 +173,7 @@ export async function getInterviewSessionAction(sessionId: string) {
             weaknesses: [],
             missingConcepts: [],
             idealStructure: q.answer.feedback,
+            modelAnswer: null,
             followUpQuestion: null,
           };
         }
@@ -367,5 +368,119 @@ export async function deleteInterviewSessionAction(sessionId: string) {
   } catch (error) {
     console.error("Error deleting session:", error);
     return { success: false, error: "Failed to delete session" };
+  }
+}
+
+/**
+ * Retrieves the candidate's active applications so they can link this interview scorecard to an application.
+ */
+export async function getUserApplicationsForInterviewAction() {
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) return { success: true, applications: [] };
+
+    const applications = await prisma.application.findMany({
+      where: { userId: user.id },
+      include: {
+        job: {
+          select: { company: true, position: true },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: 25,
+    });
+
+    return {
+      success: true,
+      applications: applications.map((a) => ({
+        id: a.id,
+        company: a.job.company,
+        position: a.job.position,
+        status: a.status,
+      })),
+    };
+  } catch (error) {
+    console.error("Error fetching user applications for interview link:", error);
+    return { success: false, applications: [], error: "Failed to load applications" };
+  }
+}
+
+/**
+ * Logs a completed interview session directly into an application's Kanban timeline events and notes.
+ */
+export async function logInterviewToApplicationTimelineAction(params: {
+  sessionId: string;
+  applicationId: string;
+}) {
+  const { sessionId, applicationId } = params;
+
+  try {
+    const user = await getAuthenticatedUser();
+    if (!user) {
+      return { success: false, error: "Authentication required" };
+    }
+
+    const [session, application] = await Promise.all([
+      prisma.interviewSession.findUnique({
+        where: { id: sessionId },
+        include: {
+          questions: {
+            include: { answer: true },
+          },
+        },
+      }),
+      prisma.application.findUnique({
+        where: { id: applicationId },
+        include: { job: true },
+      }),
+    ]);
+
+    if (!session || !application) {
+      return { success: false, error: "Session or application not found" };
+    }
+
+    const answered = session.questions.filter((q) => q.answer !== null);
+    const avgScore =
+      session.overallScore ??
+      (answered.length > 0
+        ? Math.round(
+            (answered.reduce((acc, q) => acc + (q.answer?.score ?? 7), 0) / answered.length) *
+              10
+          ) / 10
+        : 8.0);
+
+    const eventDescription = `Practiced AI Mock Interview for ${session.role} (${session.difficulty} difficulty). Score: ${avgScore}/10 across ${answered.length} questions.`;
+
+    // 1. Create ApplicationEvent
+    await prisma.applicationEvent.create({
+      data: {
+        applicationId: application.id,
+        type: "MOCK_INTERVIEW_PRACTICE",
+        description: eventDescription,
+      },
+    });
+
+    // 2. Append to Application notes
+    const updatedNotes = application.notes
+      ? `${application.notes}\n\n[Mock Interview Practice (${new Date().toLocaleDateString()})]: Score ${avgScore}/10 for ${session.role}`
+      : `[Mock Interview Practice (${new Date().toLocaleDateString()})]: Score ${avgScore}/10 for ${session.role}`;
+
+    await prisma.application.update({
+      where: { id: application.id },
+      data: {
+        notes: updatedNotes,
+      },
+    });
+
+    revalidatePath("/applications");
+    revalidatePath(`/dashboard/applications/${application.id}`);
+
+    return {
+      success: true,
+      message: `Practice session logged to ${application.job.company} application timeline!`,
+    };
+  } catch (error: any) {
+    console.error("Error logging interview to application timeline:", error);
+    return { success: false, error: error.message || "Failed to log practice session" };
   }
 }
