@@ -31,6 +31,8 @@ import {
   submitInterviewAnswerAction,
   createInterviewSessionAction,
 } from "@/app/actions/interview";
+import { AudioWaveformVisualizer } from "@/components/coach/audio-waveform-visualizer";
+import { SpeechDeliveryTracker } from "@/components/coach/speech-delivery-tracker";
 
 interface EvaluationScores {
   overall: number;
@@ -88,6 +90,7 @@ function SessionContent() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [autoReadQuestions, setAutoReadQuestions] = useState(false);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [micUnsupported, setMicUnsupported] = useState(false);
 
@@ -169,8 +172,14 @@ function SessionContent() {
     if (currentQuestion) {
       setAnswer(currentQuestion.answer?.answer || "");
       stopAudio();
+      if (autoReadQuestions && !currentQuestion.answer) {
+        const timer = setTimeout(() => {
+          toggleReadAloud();
+        }, 400);
+        return () => clearTimeout(timer);
+      }
     }
-  }, [currentQIndex, currentQuestion]);
+  }, [currentQIndex, currentQuestion, autoReadQuestions]);
 
   // Speech Recognition (Dictation) Setup
   const toggleRecording = () => {
@@ -244,7 +253,7 @@ function SessionContent() {
     setIsRecording(false);
   };
 
-  // Text-To-Speech (Read Aloud)
+  // Text-To-Speech (Read Aloud with Natural Voice)
   const toggleReadAloud = () => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
 
@@ -257,8 +266,25 @@ function SessionContent() {
 
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(currentQuestion.question);
-    utterance.rate = 1.0;
+    utterance.rate = 0.95;
     utterance.pitch = 1.0;
+
+    // Pick a natural English voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const englishVoice =
+      voices.find(
+        (v) =>
+          (v.name.includes("Google") ||
+            v.name.includes("Natural") ||
+            v.name.includes("Samantha") ||
+            v.name.includes("Daniel") ||
+            v.name.includes("Guy")) &&
+          v.lang.startsWith("en")
+      ) || voices.find((v) => v.lang.startsWith("en"));
+
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
 
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
@@ -572,30 +598,53 @@ function SessionContent() {
           {/* Question Display Card */}
           <Card className="border-border shadow-xs">
             <CardHeader className="bg-muted/30 pb-3 border-b border-border">
-              <div className="flex justify-between items-center">
-                <Badge variant="outline" className="bg-background text-xs">
-                  {currentQuestion.category}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={toggleReadAloud}
-                  className={`text-xs gap-1.5 h-7 px-2.5 ${
-                    isSpeaking
-                      ? "text-red-500 hover:text-red-600 bg-red-500/10"
-                      : "text-primary hover:text-primary bg-primary/10 hover:bg-primary/15"
-                  }`}
-                >
-                  {isSpeaking ? (
-                    <>
-                      <VolumeX className="h-3.5 w-3.5" /> Stop Audio
-                    </>
-                  ) : (
-                    <>
-                      <Volume2 className="h-3.5 w-3.5" /> Read Aloud
-                    </>
+              <div className="flex flex-wrap justify-between items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-background text-xs">
+                    {currentQuestion.category}
+                  </Badge>
+                  {isSpeaking && (
+                    <span className="flex items-center gap-1.5 text-xs font-semibold text-primary animate-pulse bg-primary/10 px-2.5 py-0.5 rounded-full">
+                      <Volume2 className="h-3 w-3" /> Interviewer Speaking...
+                    </span>
                   )}
-                </Button>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setAutoReadQuestions((prev) => !prev)}
+                    className={`text-[10px] px-2 py-1 rounded-md border transition-all cursor-pointer ${
+                      autoReadQuestions
+                        ? "bg-primary/10 border-primary/30 text-primary font-semibold"
+                        : "text-muted-foreground border-border/60 hover:text-foreground"
+                    }`}
+                    title="Automatically read each new question aloud when loading"
+                  >
+                    ⚡ Auto-Voice: {autoReadQuestions ? "ON" : "OFF"}
+                  </button>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={toggleReadAloud}
+                    className={`text-xs gap-1.5 h-7 px-2.5 ${
+                      isSpeaking
+                        ? "text-red-500 hover:text-red-600 bg-red-500/10"
+                        : "text-primary hover:text-primary bg-primary/10 hover:bg-primary/15"
+                    }`}
+                  >
+                    {isSpeaking ? (
+                      <>
+                        <VolumeX className="h-3.5 w-3.5" /> Stop Voice
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="h-3.5 w-3.5" /> Listen to Voice
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-6 pb-6 text-center min-h-[140px] flex flex-col justify-center">
@@ -622,11 +671,16 @@ function SessionContent() {
 
             <CardContent className="p-0">
               <textarea
-                className="w-full min-h-[220px] p-4 bg-transparent border-0 focus:ring-0 resize-none text-sm sm:text-base leading-relaxed placeholder:text-muted-foreground/60"
+                className="w-full min-h-[200px] p-4 bg-transparent border-0 focus:ring-0 resize-none text-sm sm:text-base leading-relaxed placeholder:text-muted-foreground/60"
                 value={answer}
                 onChange={(e) => setAnswer(e.target.value)}
-                placeholder="Type your answer clearly, or click 'Use Microphone' to speak your answer natively..."
+                placeholder="Type your answer clearly, or click 'Speak Answer' to speak your response natively..."
                 disabled={isEvaluating}
+              />
+              <SpeechDeliveryTracker
+                text={answer}
+                recordingSeconds={recordingSeconds}
+                isRecording={isRecording}
               />
             </CardContent>
 
@@ -636,14 +690,14 @@ function SessionContent() {
               </div>
             )}
 
-            <CardFooter className="bg-muted/20 border-t border-border p-3.5 flex flex-wrap items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+            <CardFooter className="bg-muted/20 border-t border-border p-3.5 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
                 <Button
                   variant={isRecording ? "destructive" : "outline"}
                   size="sm"
                   onClick={toggleRecording}
                   disabled={isEvaluating}
-                  className="gap-1.5 text-xs transition-all"
+                  className="gap-1.5 text-xs transition-all shrink-0"
                 >
                   {isRecording ? (
                     <>
@@ -651,10 +705,16 @@ function SessionContent() {
                     </>
                   ) : (
                     <>
-                      <Mic className="h-3.5 w-3.5" /> Use Microphone
+                      <Mic className="h-3.5 w-3.5" /> Speak Answer
                     </>
                   )}
                 </Button>
+
+                {isRecording && (
+                  <div className="flex items-center gap-2">
+                    <AudioWaveformVisualizer isRecording={isRecording} className="h-8 max-w-[180px]" />
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-2">
