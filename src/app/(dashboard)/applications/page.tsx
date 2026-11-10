@@ -10,12 +10,20 @@ export default async function ApplicationsPage() {
   const applications = await prisma.application.findMany({
     where: { userId: user.id },
     include: {
-      job: true,
+      job: {
+        include: {
+          analysis: { select: { id: true } },
+          jobMatches: {
+            orderBy: { overallScore: "desc" },
+            take: 1,
+            select: { overallScore: true, resumeId: true },
+          },
+        },
+      },
+      resume: { select: { id: true, name: true } },
     },
     orderBy: { updatedAt: "desc" },
   });
 
-  // We need to format the applications for the KanbanBoard
-  // Kanban board takes initialApplications
   return <ApplicationsClient initialApplications={applications} />;
 }
