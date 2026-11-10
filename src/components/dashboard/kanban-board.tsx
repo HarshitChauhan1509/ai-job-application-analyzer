@@ -48,39 +48,47 @@ const DEFAULT_COLUMNS = {
 };
 const COLUMN_ORDER = ["SAVED", "APPLIED", "SCREENING", "INTERVIEW", "OFFER", "REJECTED"];
 
+function buildBoardData(initialApplications: Record<string, any>[]): BoardData {
+  const apps: Record<string, Application> = {};
+  const cols = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
+
+  initialApplications.forEach((app) => {
+    const match = app.job?.jobMatches?.[0]?.overallScore ?? (app.job?.analysis ? 75 : 0);
+    apps[app.id] = {
+      id: app.id,
+      company: app.job?.company || "Unknown",
+      position: app.job?.position || "Unknown",
+      location: app.job?.location || "Remote",
+      match,
+      date: formatDate(app.updatedAt),
+      status: app.status || "SAVED",
+    };
+
+    const status = app.status || "SAVED";
+    if (cols[status]) {
+      cols[status].applicationIds.push(app.id);
+    }
+  });
+
+  return {
+    applications: apps,
+    columns: cols,
+    columnOrder: COLUMN_ORDER,
+  };
+}
+
 export function KanbanBoard({ initialApplications = [] }: { initialApplications?: Record<string, any>[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [outreachApp, setOutreachApp] = useState<Application | null>(null);
-  const [data, setData] = useState<BoardData>(() => {
-    const apps: Record<string, Application> = {};
-    const cols = JSON.parse(JSON.stringify(DEFAULT_COLUMNS));
-    
-    initialApplications.forEach(app => {
-      const match = app.job?.analysis ? 85 : 0; // Or whatever calculation
-      apps[app.id] = {
-        id: app.id,
-        company: app.job?.company || "Unknown",
-        position: app.job?.position || "Unknown",
-        location: app.job?.location || "Remote",
-        match,
-        date: formatDate(app.updatedAt),
-        status: app.status || "SAVED"
-      };
-      
-      const status = app.status || "SAVED";
-      if (cols[status]) {
-        cols[status].applicationIds.push(app.id);
-      }
-    });
-
-    return {
-      applications: apps,
-      columns: cols,
-      columnOrder: COLUMN_ORDER
-    };
-  });
+  const [data, setData] = useState<BoardData>(() => buildBoardData(initialApplications));
   
   const [isMounted, setIsMounted] = useState(false);
+
+  // Sync board state when server revalidates initialApplications (e.g., after Gmail sync or Quick Log)
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setData(buildBoardData(initialApplications));
+  }, [initialApplications]);
 
   // Fix hydration issues with react-beautiful-dnd
   useEffect(() => {
@@ -254,7 +262,9 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
                                     </div>
                                     <div className="flex flex-col items-end">
                                       <span className="text-[10px] uppercase font-bold text-muted-foreground mb-0.5">Match</span>
-                                      <span className={`text-xs font-bold ${app.match >= 90 ? 'text-green-600' : app.match >= 80 ? 'text-primary' : 'text-amber-600'}`}>{app.match}%</span>
+                                      <span className={`text-xs font-bold ${app.match >= 90 ? 'text-green-600' : app.match >= 80 ? 'text-primary' : app.match > 0 ? 'text-amber-600' : 'text-muted-foreground'}`}>
+                                        {app.match > 0 ? `${app.match}%` : "—"}
+                                      </span>
                                     </div>
                                   </div>
 
@@ -276,7 +286,7 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
                                       >
                                         <Send size={11} /> Pitch
                                       </button>
-                                      <Link href={`/dashboard/applications/${app.id}`}>
+                                      <Link href={`/applications/${app.id}`}>
                                         <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 text-xs text-primary font-medium">
                                           Details <ArrowRight size={12} />
                                         </div>
