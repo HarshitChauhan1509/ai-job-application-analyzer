@@ -3,6 +3,8 @@
 import { analyzeResume } from "@/lib/ai/resume-analyzer";
 import { analyzeJobDescription } from "@/lib/ai/job-analyzer";
 import { prisma } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
+import { hasEnoughCredits, deductCredits, CREDIT_COSTS } from "@/lib/credits";
 import { revalidatePath } from "next/cache";
 
 export async function processResumeAction(resumeId: string, resumeText: string) {
@@ -34,8 +36,8 @@ export async function processResumeAction(resumeId: string, resumeText: string) 
       }
     });
 
-    revalidatePath(`/dashboard/resumes/${resumeId}`);
-    revalidatePath("/dashboard/resumes");
+    revalidatePath(`/resumes/${resumeId}`);
+    revalidatePath("/resumes");
     
     return { success: true, analysis: savedAnalysis };
   } catch (error) {
@@ -65,7 +67,7 @@ export async function processJobAction(jobId: string, jobDescriptionText: string
       }
     });
 
-    revalidatePath(`/dashboard/jobs/${jobId}`);
+    revalidatePath("/jobs");
     
     return { success: true, analysis: savedAnalysis };
   } catch (error) {
@@ -112,12 +114,151 @@ export async function matchJobAction(resumeId: string, jobId: string, resumeText
       }
     });
 
-    revalidatePath(`/dashboard/match/${resumeId}/${jobId}`);
+    revalidatePath(`/match/${resumeId}/${jobId}`);
+    revalidatePath("/jobs");
+    revalidatePath("/applications");
     
     return { success: true, match: savedMatch };
   } catch (error) {
     console.error("Error in matchJobAction:", error);
     return { success: false, error: "Failed to match job" };
+  }
+}
+
+/**
+ * Computes (or recomputes) a live AI resume-to-job match using stored Resume, Profile, and Job data.
+ * Enforces credit verification & atomic deduction via CreditLedger.
+ */
+export async function runLiveJobMatchAction(resumeId: string, jobId: string) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { success: false, error: "Unauthorized. Please log in." };
+    }
+
+    const cost = CREDIT_COSTS.JOB_MATCH ?? 2;
+    const creditCheck = await hasEnoughCredits(user.id, cost);
+    if (!creditCheck.hasEnough) {
+      return {
+        success: false,
+        code: "INSUFFICIENT_CREDITS",
+        requiredCredits: cost,
+        currentBalance: creditCheck.currentBalance,
+        error: `You need ${cost} AI credits to run a live resume-to-job match analysis (balance: ${creditCheck.currentBalance}).`,
+      };
+    }
+
+    const [resume, job, profile] = await Promise.all([
+      prisma.resume.findFirst({
+        where: { id: resumeId, userId: user.id },
+        include: { analysis: true },
+      }),
+      prisma.job.findFirst({
+        where: {
+          id: jobId,
+          OR: [{ userId: user.id }, { isCurated: true }],
+        },
+        include: { analysis: true },
+      }),
+      prisma.profile.findUnique({
+        where: { userId: user.id },
+      }),
+    ]);
+
+    if (!resume || !job) {
+      return { success: false, error: "Resume or Job record could not be found." };
+    }
+
+    const candidateSummaryParts: string[] = [
+      `Resume Title: ${resume.name}`,
+      resume.targetRole ? `Target Role: ${resume.targetRole}` : "",
+      resume.resumeType ? `Specialization: ${resume.resumeType}` : "",
+      resume.tags ? `Resume Tags: ${resume.tags}` : "",
+    ];
+
+    if (resume.analysis) {
+      candidateSummaryParts.push(
+        `Resume Strengths: ${resume.analysis.strengths}`,
+        `Resume Recommendations: ${resume.analysis.recommendations}`
+      );
+    }
+
+    if (profile) {
+      if (profile.headline) candidateSummaryParts.push(`Headline: ${profile.headline}`);
+      if (profile.bio) candidateSummaryParts.push(`Bio: ${profile.bio}`);
+      if (profile.experience) candidateSummaryParts.push(`Work Experience: ${profile.experience}`);
+      if (profile.githubProjects) candidateSummaryParts.push(`GitHub Proof-of-Work: ${profile.githubProjects}`);
+    }
+
+    const jobContextParts: string[] = [
+      `Company: ${job.company}`,
+      `Position: ${job.position}`,
+      job.location ? `Location: ${job.location}` : "",
+      `Job Description: ${job.description}`,
+    ];
+
+    if (job.analysis) {
+      jobContextParts.push(
+        `Required Skills: ${job.analysis.requiredSkills}`,
+        `Preferred Skills: ${job.analysis.preferredSkills}`,
+        `Responsibilities: ${job.analysis.responsibilities}`,
+        `ATS Keywords: ${job.analysis.keywords}`
+      );
+    }
+
+    const matchResult = await matchJobToResume(
+      candidateSummaryParts.filter(Boolean).join("\n"),
+      jobContextParts.filter(Boolean).join("\n")
+    );
+
+    const savedMatch = await prisma.jobMatch.upsert({
+      where: {
+        resumeId_jobId: { resumeId: resume.id, jobId: job.id },
+      },
+      create: {
+        resumeId: resume.id,
+        jobId: job.id,
+        overallScore: matchResult.overallScore,
+        skillsScore: matchResult.skillsScore,
+        experienceScore: matchResult.experienceScore,
+        keywordsScore: matchResult.keywordsScore,
+        strongMatches: JSON.stringify(matchResult.strongMatches),
+        missingSkills: JSON.stringify(matchResult.missingSkills),
+        missingKeywords: JSON.stringify(matchResult.missingKeywords),
+        recommendations: JSON.stringify(matchResult.recommendations),
+      },
+      update: {
+        overallScore: matchResult.overallScore,
+        skillsScore: matchResult.skillsScore,
+        experienceScore: matchResult.experienceScore,
+        keywordsScore: matchResult.keywordsScore,
+        strongMatches: JSON.stringify(matchResult.strongMatches),
+        missingSkills: JSON.stringify(matchResult.missingSkills),
+        missingKeywords: JSON.stringify(matchResult.missingKeywords),
+        recommendations: JSON.stringify(matchResult.recommendations),
+      },
+    });
+
+    await deductCredits({
+      userId: user.id,
+      amount: cost,
+      action: "JOB_MATCH",
+      description: `Resume match analysis: ${resume.name} vs ${job.position} @ ${job.company}`,
+    });
+
+    revalidatePath("/", "layout");
+    revalidatePath(`/match/${resume.id}/${job.id}`);
+    revalidatePath("/jobs");
+    revalidatePath("/applications");
+    revalidatePath("/dashboard");
+
+    return { success: true, match: savedMatch };
+  } catch (error: unknown) {
+    console.error("Error in runLiveJobMatchAction:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to run live match analysis",
+    };
   }
 }
 
