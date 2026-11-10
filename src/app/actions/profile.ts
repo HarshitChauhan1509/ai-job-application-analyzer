@@ -59,7 +59,7 @@ export interface PublicProfileData {
   resumeName?: string | null;
 }
 
-export function sortExperiences(items: ExperienceItem[]): ExperienceItem[] {
+function sortExperiences(items: ExperienceItem[]): ExperienceItem[] {
   return [...items].sort((a, b) => {
     if (a.isCurrent && !b.isCurrent) return -1;
     if (!a.isCurrent && b.isCurrent) return 1;
@@ -709,7 +709,6 @@ export async function savePinnedGitHubProjectsAction(projects: GitHubRepoItem[])
 
     revalidatePath("/profile");
     revalidatePath("/dashboard");
-    revalidatePath("/dashboard/profile");
     if (profile.username) {
       revalidatePath(`/p/${profile.username}`);
     }
