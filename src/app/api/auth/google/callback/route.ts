@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   if (error || !code) {
     console.error("Google OAuth callback error:", error);
     return NextResponse.redirect(
-      `${appUrl}/dashboard/applications?sync_error=${encodeURIComponent(
+      `${appUrl}/applications?sync_error=${encodeURIComponent(
         error || "Authorization declined"
       )}`
     );
@@ -74,20 +74,20 @@ export async function GET(req: NextRequest) {
           title: "📬 Gmail Account Connected!",
           message: `Your mailbox (${tokens.email}) is connected. CareerPilot can now detect recruiter responses and interview invites.`,
           type: "SYSTEM",
-          link: "/dashboard/applications",
+          link: "/applications",
         },
       })
       .catch((e) => console.warn("Failed to create notification:", e));
 
     return NextResponse.redirect(
-      `${appUrl}/dashboard/applications?sync=connected&email=${encodeURIComponent(
+      `${appUrl}/applications?sync=connected&email=${encodeURIComponent(
         tokens.email || ""
       )}`
     );
   } catch (err: any) {
     console.error("Error processing Google OAuth callback:", err);
     return NextResponse.redirect(
-      `${appUrl}/dashboard/applications?sync_error=${encodeURIComponent(
+      `${appUrl}/applications?sync_error=${encodeURIComponent(
         err.message || "Failed to link Gmail account"
       )}`
     );
