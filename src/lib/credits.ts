@@ -5,6 +5,7 @@ export type PlanTier = "FREE" | "PRO" | "LIFETIME";
 export type CreditAction =
   | "INITIAL_SIGNUP"
   | "RESUME_ANALYSIS"
+  | "JOB_MATCH"
   | "JOB_SCRAPER"
   | "OUTREACH_PITCH"
   | "EMAIL_PARSER"
@@ -16,6 +17,7 @@ export type CreditAction =
 
 export const CREDIT_COSTS: Record<string, number> = {
   RESUME_ANALYSIS: 5,
+  JOB_MATCH: 2,
   JOB_SCRAPER: 2,
   OUTREACH_PITCH: 3,
   EMAIL_PARSER: 2,
