@@ -319,7 +319,13 @@ export function BillingManager({
             </span>
             <CardTitle className="text-base font-bold mt-1">AI Action Costs</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-xs pt-1">
+          <CardContent className="space-y-1.5 text-xs pt-1">
+            <div className="flex justify-between items-center py-1 border-b border-border/30">
+              <span className="text-muted-foreground">AI Mock Interview Session</span>
+              <Badge variant="outline" className="text-[10px] font-mono">
+                10 credits
+              </Badge>
+            </div>
             <div className="flex justify-between items-center py-1 border-b border-border/30">
               <span className="text-muted-foreground">Founder Outreach Pitch</span>
               <Badge variant="outline" className="text-[10px] font-mono">
@@ -327,21 +333,15 @@ export function BillingManager({
               </Badge>
             </div>
             <div className="flex justify-between items-center py-1 border-b border-border/30">
-              <span className="text-muted-foreground">AI Email &amp; Status Parser</span>
+              <span className="text-muted-foreground">Job Match / Email Parser</span>
               <Badge variant="outline" className="text-[10px] font-mono">
                 2 credits
-              </Badge>
-            </div>
-            <div className="flex justify-between items-center py-1 border-b border-border/30">
-              <span className="text-muted-foreground">Application Copilot Message</span>
-              <Badge variant="outline" className="text-[10px] font-mono">
-                1 credit
               </Badge>
             </div>
             <div className="flex justify-between items-center py-1">
-              <span className="text-muted-foreground">Resume ATS Tailoring</span>
+              <span className="text-muted-foreground">Application Copilot Message</span>
               <Badge variant="outline" className="text-[10px] font-mono">
-                2 credits
+                1 credit
               </Badge>
             </div>
           </CardContent>
