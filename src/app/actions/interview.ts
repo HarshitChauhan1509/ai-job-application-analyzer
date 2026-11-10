@@ -473,7 +473,7 @@ export async function logInterviewToApplicationTimelineAction(params: {
     });
 
     revalidatePath("/applications");
-    revalidatePath(`/dashboard/applications/${application.id}`);
+    revalidatePath(`/applications/${application.id}`);
 
     return {
       success: true,
