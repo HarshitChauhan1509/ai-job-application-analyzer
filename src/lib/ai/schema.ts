@@ -81,3 +81,39 @@ export const InterviewEvaluationSchema = z.object({
 });
 
 export type InterviewEvaluationOutput = z.infer<typeof InterviewEvaluationSchema>;
+
+export const TailoredSkillGroupSchema = z.object({
+  category: z.string(),
+  items: z.array(z.string()),
+});
+
+export const TailoredExperienceEntrySchema = z.object({
+  company: z.string(),
+  title: z.string(),
+  duration: z.string(),
+  location: z.string().optional().nullable(),
+  bullets: z.array(z.string()),
+});
+
+export const TailoredProjectEntrySchema = z.object({
+  name: z.string(),
+  url: z.string().optional().nullable(),
+  techStack: z.string().optional().nullable(),
+  highlights: z.array(z.string()),
+});
+
+export const TailoredResumeSchema = z.object({
+  matchScoreEstimate: z.number().min(0).max(100),
+  tailoredSummary: z.string(),
+  skillsSection: z.array(TailoredSkillGroupSchema),
+  tailoredExperience: z.array(TailoredExperienceEntrySchema),
+  tailoredProjects: z.array(TailoredProjectEntrySchema),
+  educationSection: z.string().optional().nullable(),
+  keywordsInjected: z.array(z.string()),
+  tailoringNotes: z.string(),
+});
+
+export type TailoredSkillGroup = z.infer<typeof TailoredSkillGroupSchema>;
+export type TailoredExperienceEntry = z.infer<typeof TailoredExperienceEntrySchema>;
+export type TailoredProjectEntry = z.infer<typeof TailoredProjectEntrySchema>;
+export type TailoredResumeOutput = z.infer<typeof TailoredResumeSchema>;
