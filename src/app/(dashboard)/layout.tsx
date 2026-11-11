@@ -16,13 +16,19 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <Sidebar className="hidden md:flex" />
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header user={user} />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-muted/10 relative">
+    <div className="flex h-screen overflow-hidden bg-background print:h-auto print:overflow-visible print:block print:bg-white">
+      <div className="print:hidden flex">
+        <Sidebar className="hidden md:flex" />
+      </div>
+      <div className="flex flex-1 flex-col overflow-hidden print:overflow-visible">
+        <div className="print:hidden">
+          <Header user={user} />
+        </div>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-muted/10 relative print:overflow-visible print:p-0 print:bg-white">
           {children}
-          <AICopilot />
+          <div className="print:hidden">
+            <AICopilot />
+          </div>
         </main>
       </div>
     </div>
