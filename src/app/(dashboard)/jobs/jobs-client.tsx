@@ -64,6 +64,7 @@ interface JobAnalysisData {
 }
 
 interface JobMatchData {
+  resumeId?: string;
   overallScore: number;
   skillsScore: number;
   experienceScore: number;
@@ -1558,9 +1559,18 @@ export default function JobsClient({
                           <Sparkles className="h-4 w-4 text-primary" />
                           Resume Match Compatibility
                         </span>
-                        <span className="text-base font-bold text-primary">
-                          {selectedJob.jobMatches[0].overallScore}% Match
-                        </span>
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-base font-bold text-primary">
+                            {selectedJob.jobMatches[0].overallScore}% Match
+                          </span>
+                          {selectedJob.jobMatches[0].resumeId && (
+                            <Link href={`/match/${selectedJob.jobMatches[0].resumeId}/${selectedJob.id}`}>
+                              <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs gap-1">
+                                Full Report <ExternalLink className="h-3 w-3" />
+                              </Button>
+                            </Link>
+                          )}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-3 gap-2 pt-2 border-t border-primary/10 text-center">
