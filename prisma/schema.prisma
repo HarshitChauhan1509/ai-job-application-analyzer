@@ -29,6 +29,7 @@ model User {
   credit            UserCredit?
   emailConnection   EmailConnection?
   syncedEmails      SyncedEmailLog[]
+  tailoredResumes   TailoredResume[]
 }
 
 model Profile {
@@ -63,9 +64,10 @@ model Resume {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  analysis     ResumeAnalysis?
-  applications Application[]
-  jobMatches   JobMatch[]
+  analysis         ResumeAnalysis?
+  applications     Application[]
+  jobMatches       JobMatch[]
+  tailoredVariants TailoredResume[]
 }
 
 model ResumeAnalysis {
@@ -103,9 +105,10 @@ model Job {
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
 
-  analysis     JobAnalysis?
-  applications Application[]
-  jobMatches   JobMatch[]
+  analysis        JobAnalysis?
+  applications    Application[]
+  jobMatches      JobMatch[]
+  tailoredResumes TailoredResume[]
 }
 
 model JobAnalysis {
@@ -336,4 +339,31 @@ model SyncedEmailLog {
   @@index([userId])
   @@index([messageId])
   @@index([applicationId])
+}
+
+model TailoredResume {
+  id                  String   @id @default(cuid())
+  userId              String
+  user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  baseResumeId        String?
+  baseResume          Resume?  @relation(fields: [baseResumeId], references: [id], onDelete: SetNull)
+  jobId               String?
+  job                 Job?     @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  title               String   // e.g. "Senior Full Stack Engineer — Stripe Tailored"
+  targetCompany       String
+  targetRole          String
+  matchScoreEstimate  Int      @default(85)
+  tailoredSummary     String
+  skillsSection       String   // Stored as JSON array of { category: string, items: string[] }
+  tailoredExperience  String   // Stored as JSON array of { company, title, duration, bullets: string[] }
+  tailoredProjects    String   // Stored as JSON array of { name, url, techStack, highlights: string[] }
+  educationSection    String?
+  keywordsInjected    String   // Stored as JSON array of ATS keywords woven into resume
+  tailoringNotes      String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@index([userId])
+  @@index([jobId])
+  @@index([baseResumeId])
 }
