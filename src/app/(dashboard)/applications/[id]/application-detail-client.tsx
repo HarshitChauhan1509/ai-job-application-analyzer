@@ -30,8 +30,10 @@ import {
   MessageSquare,
   Target,
   Briefcase,
+  Printer,
 } from "lucide-react";
 import { OutreachModal } from "@/components/dashboard/outreach-modal";
+import { TailorResumeDialog } from "@/components/resumes/tailor-resume-dialog";
 import {
   updateApplicationStatusAction,
   updateApplicationDetailsAction,
@@ -123,6 +125,8 @@ function getEventBadgeInfo(type: string) {
       return { icon: Mail, color: "bg-emerald-500 text-white", label: "Recruiter Email" };
     case "OUTREACH_GENERATED":
       return { icon: Send, color: "bg-blue-500 text-white", label: "Outreach Pitch" };
+    case "RESUME_TAILORED":
+      return { icon: Printer, color: "bg-violet-500 text-white", label: "Tailored Resume" };
     case "STATUS_CHANGE":
       return { icon: TrendingUp, color: "bg-purple-500 text-white", label: "Stage Update" };
     case "NOTE_ADDED":
@@ -155,6 +159,7 @@ export function ApplicationDetailClient({
   const [isDeleting, setIsDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
+  const [tailorOpen, setTailorOpen] = useState(false);
 
   const statusMeta = PIPELINE_STATUSES.find((s) => s.value === status) || PIPELINE_STATUSES[0];
 
@@ -517,33 +522,53 @@ export function ApplicationDetailClient({
                     <p className="text-xs sm:text-sm text-muted-foreground">
                       Explore missing skills, ATS keywords, and bullet-point tailoring tips for this role.
                     </p>
-                    <Link href={`/match/${activeMatch.resumeId}/${initialApplication.job.id}`}>
-                      <Button variant="outline" size="sm" className="shrink-0 gap-1.5 text-xs">
-                        View Full Match Report <ExternalLink className="h-3.5 w-3.5" />
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <Button
+                        size="sm"
+                        variant="default"
+                        onClick={() => setTailorOpen(true)}
+                        className="gap-1.5 text-xs"
+                      >
+                        <Printer className="h-3.5 w-3.5" /> Tailor ATS PDF
                       </Button>
-                    </Link>
+                      <Link href={`/match/${activeMatch.resumeId}/${initialApplication.job.id}`}>
+                        <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+                          Full Match Report <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
                   <p className="text-sm text-muted-foreground">
                     {effectiveResumeId
-                      ? "Run our live ATS compatibility engine to see your exact skills match, missing keywords, and improvement plan."
-                      : "Upload a resume first to score your fit against this job description."}
+                      ? "Run our live ATS compatibility engine or instantly generate a role-tailored ATS resume PDF."
+                      : "Generate an AI-tailored ATS resume PDF for this role or upload a base resume first."}
                   </p>
-                  {effectiveResumeId ? (
-                    <Link href={`/match/${effectiveResumeId}/${initialApplication.job.id}`}>
-                      <Button size="sm" className="shrink-0 gap-1.5 text-xs">
-                        <Sparkles className="h-3.5 w-3.5" /> Run Live Match Analysis
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Link href="/resumes">
-                      <Button variant="outline" size="sm" className="shrink-0 text-xs">
-                        Upload Resume
-                      </Button>
-                    </Link>
-                  )}
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setTailorOpen(true)}
+                      className="gap-1.5 text-xs"
+                    >
+                      <Printer className="h-3.5 w-3.5" /> Tailor ATS PDF
+                    </Button>
+                    {effectiveResumeId ? (
+                      <Link href={`/match/${effectiveResumeId}/${initialApplication.job.id}`}>
+                        <Button size="sm" className="gap-1.5 text-xs">
+                          <Sparkles className="h-3.5 w-3.5" /> Run Live Match
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link href="/resumes">
+                        <Button variant="outline" size="sm" className="text-xs">
+                          Upload Resume
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -727,6 +752,24 @@ export function ApplicationDetailClient({
         applicationId={initialApplication.id}
         companyName={initialApplication.job.company}
         roleTitle={initialApplication.job.position}
+      />
+
+      <TailorResumeDialog
+        open={tailorOpen}
+        onOpenChange={setTailorOpen}
+        resumes={userResumes}
+        jobs={[
+          {
+            id: initialApplication.job.id,
+            company: initialApplication.job.company,
+            position: initialApplication.job.position,
+            location: initialApplication.job.location,
+          },
+        ]}
+        defaultResumeId={effectiveResumeId || undefined}
+        defaultJobId={initialApplication.job.id}
+        defaultCompany={initialApplication.job.company}
+        defaultRole={initialApplication.job.position}
       />
     </div>
   );
