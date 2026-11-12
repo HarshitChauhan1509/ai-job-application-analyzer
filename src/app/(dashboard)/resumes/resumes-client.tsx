@@ -42,20 +42,33 @@ import {
   ArrowRight,
   Target,
   ExternalLink,
+  Printer,
 } from "lucide-react";
 import { FileUploader, RESUME_TYPE_CONFIG, ResumeTypeKey } from "@/components/dashboard/file-uploader";
+import { TailorResumeDialog } from "@/components/resumes/tailor-resume-dialog";
 import { formatDate } from "@/lib/format-date";
 import {
   deleteResumeAction,
   setPrimaryResumeAction,
   updateResumeMetadataAction,
 } from "@/app/actions/resume";
+import { deleteTailoredResumeAction } from "@/app/actions/tailor";
 
 interface JobItem {
   id: string;
   company: string;
   position: string;
   location?: string | null;
+}
+
+interface TailoredResumeSummary {
+  id: string;
+  title: string;
+  targetCompany: string;
+  targetRole: string;
+  matchScoreEstimate: number;
+  updatedAt: string | Date;
+  jobId: string | null;
 }
 
 interface ResumeItem {
@@ -78,16 +91,25 @@ interface ResumeItem {
 
 interface ResumesClientProps {
   initialResumes: ResumeItem[];
+  initialTailoredResumes?: TailoredResumeSummary[];
   jobs?: JobItem[];
   userId: string;
 }
 
-export default function ResumesClient({ initialResumes, jobs = [], userId }: ResumesClientProps) {
+export default function ResumesClient({
+  initialResumes,
+  initialTailoredResumes = [],
+  jobs = [],
+  userId,
+}: ResumesClientProps) {
   const router = useRouter();
   const [resumes, setResumes] = useState<ResumeItem[]>(initialResumes);
+  const [tailoredResumes, setTailoredResumes] = useState<TailoredResumeSummary[]>(initialTailoredResumes);
   const [isUploading, setIsUploading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<string>("ALL");
+  const [tailorDialogOpen, setTailorDialogOpen] = useState(false);
+  const [tailorBaseResumeId, setTailorBaseResumeId] = useState<string | undefined>(undefined);
 
   // Edit Metadata Modal state
   const [editResume, setEditResume] = useState<ResumeItem | null>(null);
@@ -208,6 +230,14 @@ export default function ResumesClient({ initialResumes, jobs = [], userId }: Res
     return matchesType && matchesSearch;
   });
 
+  const handleDeleteTailored = async (id: string) => {
+    const res = await deleteTailoredResumeAction(id);
+    if (res.success) {
+      setTailoredResumes((prev) => prev.filter((item) => item.id !== id));
+      router.refresh();
+    }
+  };
+
   // Unique specializations count
   const specializationsCount = new Set(
     resumes.map((r) => r.resumeType || "GENERAL")
@@ -229,10 +259,23 @@ export default function ResumesClient({ initialResumes, jobs = [], userId }: Res
           </p>
         </div>
 
-        <Button onClick={() => setIsUploading(!isUploading)} className="w-full sm:w-auto shadow-xs gap-1.5">
-          <Upload className="h-4 w-4" />
-          {isUploading ? "Close Uploader" : "Upload Targeted Resume"}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setTailorBaseResumeId(undefined);
+              setTailorDialogOpen(true);
+            }}
+            className="w-full sm:w-auto gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+          >
+            <Sparkles className="h-4 w-4" />
+            AI Tailor Role PDF
+          </Button>
+          <Button onClick={() => setIsUploading(!isUploading)} className="w-full sm:w-auto shadow-xs gap-1.5">
+            <Upload className="h-4 w-4" />
+            {isUploading ? "Close Uploader" : "Upload Targeted Resume"}
+          </Button>
+        </div>
       </div>
 
       {/* Upload New Resume Card */}
@@ -455,6 +498,15 @@ export default function ResumesClient({ initialResumes, jobs = [], userId }: Res
                           <Target className="mr-2 h-4 w-4" />
                           Match Against a Job
                         </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setTailorBaseResumeId(resume.id);
+                            setTailorDialogOpen(true);
+                          }}
+                        >
+                          <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                          Tailor ATS PDF for Job
+                        </DropdownMenuItem>
                         {!resume.isPrimary && (
                           <DropdownMenuItem onClick={() => handleSetPrimary(resume.id)}>
                             <Star className="mr-2 h-4 w-4" />
@@ -578,6 +630,92 @@ export default function ResumesClient({ initialResumes, jobs = [], userId }: Res
               </Card>
             );
           })
+        )}
+      </div>
+
+      {/* Role-Specific AI Tailored Resume Variants Section */}
+      <div className="space-y-4 pt-6 border-t border-border">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" /> AI Role-Specific Tailored Resumes
+            </h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Customized ATS-ready resume sheets engineered for individual companies with instant PDF export.
+            </p>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              setTailorBaseResumeId(undefined);
+              setTailorDialogOpen(true);
+            }}
+            className="gap-1.5 text-xs h-8 shrink-0"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-primary" /> Create Tailored Variant
+          </Button>
+        </div>
+
+        {tailoredResumes.length === 0 ? (
+          <Card className="border-dashed bg-muted/15 py-10">
+            <CardContent className="flex flex-col items-center justify-center text-center space-y-2.5">
+              <Printer className="h-8 w-8 text-muted-foreground" />
+              <p className="font-semibold text-sm">No Role-Tailored Variants Created Yet</p>
+              <p className="text-xs text-muted-foreground max-w-md">
+                Pick any saved job posting or paste a JD to generate a tailored summary, keyword-optimized bullet points, and a clean single-page printable ATS PDF.
+              </p>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setTailorBaseResumeId(undefined);
+                  setTailorDialogOpen(true);
+                }}
+                className="mt-2 gap-1.5 text-xs"
+              >
+                <Sparkles className="h-3.5 w-3.5" /> Generate First Tailored Resume
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tailoredResumes.map((tr) => (
+              <Card key={tr.id} className="border-primary/20 bg-card hover:shadow-md transition-all flex flex-col justify-between">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <Badge variant="outline" className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/25 text-[10px]">
+                      {tr.matchScoreEstimate}% ATS Fit
+                    </Badge>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDeleteTailored(tr.id)}
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive shrink-0"
+                      title="Delete tailored variant"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <CardTitle className="text-sm font-bold pt-1 line-clamp-1" title={tr.title}>
+                    {tr.title}
+                  </CardTitle>
+                  <CardDescription className="text-xs flex items-center gap-1.5">
+                    <Building className="h-3 w-3 shrink-0" /> {tr.targetCompany} • {tr.targetRole}
+                  </CardDescription>
+                </CardHeader>
+                <CardFooter className="pt-0 pb-3 px-4 flex items-center justify-between border-t border-border/40 bg-muted/10">
+                  <span className="text-[11px] text-muted-foreground pt-2" suppressHydrationWarning>
+                    Updated {formatDate(tr.updatedAt)}
+                  </span>
+                  <Link href={`/resumes/tailor/${tr.id}`} className="pt-2">
+                    <Button size="sm" variant="default" className="h-7 text-xs gap-1">
+                      <Printer className="h-3 w-3" /> Open Studio &amp; PDF
+                    </Button>
+                  </Link>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
 
@@ -794,6 +932,15 @@ export default function ResumesClient({ initialResumes, jobs = [], userId }: Res
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Role-Specific AI Tailor Dialog */}
+      <TailorResumeDialog
+        open={tailorDialogOpen}
+        onOpenChange={setTailorDialogOpen}
+        resumes={resumes.map((r) => ({ id: r.id, name: r.name, isPrimary: r.isPrimary }))}
+        jobs={jobs}
+        defaultResumeId={tailorBaseResumeId}
+      />
     </div>
   );
 }
