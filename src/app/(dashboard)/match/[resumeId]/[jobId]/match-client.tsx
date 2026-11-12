@@ -22,9 +22,11 @@ import {
   BookmarkPlus,
   ExternalLink,
   AlertTriangle,
+  Printer,
 } from "lucide-react";
 import { runLiveJobMatchAction } from "@/app/actions/ai";
 import { createApplicationAction } from "@/app/actions/application";
+import { generateTailoredResumeAction } from "@/app/actions/tailor";
 import { LowCreditsModal } from "@/components/credits/low-credits-modal";
 import { useToast } from "@/hooks/use-toast";
 
@@ -85,6 +87,7 @@ export function MatchAnalysisClient({
   const [application, setApplication] = useState(existingApplication);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTracking, setIsTracking] = useState(false);
+  const [isTailoring, setIsTailoring] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [lowCreditState, setLowCreditState] = useState<{
@@ -158,6 +161,44 @@ export function MatchAnalysisClient({
       });
     }
     setIsTracking(false);
+  };
+
+  const handleOneClickTailor = async () => {
+    setIsTailoring(true);
+    try {
+      const res = await generateTailoredResumeAction({
+        baseResumeId: resume.id,
+        jobId: job.id,
+      });
+
+      if (res.success && res.tailoredResumeId) {
+        toast({
+          title: "Tailored Resume Ready",
+          description: `Generated ATS-optimized PDF variant for ${job.company}.`,
+        });
+        router.push(`/resumes/tailor/${res.tailoredResumeId}`);
+      } else if (res.code === "INSUFFICIENT_CREDITS") {
+        setLowCreditState({
+          open: true,
+          required: res.requiredCredits ?? 2,
+          balance: res.currentBalance ?? 0,
+        });
+      } else {
+        toast({
+          title: "Tailoring Failed",
+          description: res.error || "Could not generate tailored resume.",
+          variant: "destructive",
+        });
+      }
+    } catch (e: unknown) {
+      toast({
+        title: "Error",
+        description: e instanceof Error ? e.message : "Failed to tailor resume.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTailoring(false);
+    }
   };
 
   const strongMatches = safeParseArray(match?.strongMatches);
@@ -483,11 +524,22 @@ export function MatchAnalysisClient({
                     </Button>
                   </Link>
                   <Link href={`/improve?resumeId=${resume.id}&jobId=${job.id}`}>
-                    <Button className="gap-2">
+                    <Button variant="outline" className="gap-2">
                       Open AI Resume Improver
                       <ArrowRight className="h-4 w-4" />
                     </Button>
                   </Link>
+                  <Button onClick={handleOneClickTailor} disabled={isTailoring} className="gap-2 shadow-sm">
+                    {isTailoring ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" /> Tailoring Resume...
+                      </>
+                    ) : (
+                      <>
+                        <Printer className="h-4 w-4" /> 1-Click Tailor ATS PDF (2 credits)
+                      </>
+                    )}
+                  </Button>
                 </div>
               </div>
             </CardContent>
