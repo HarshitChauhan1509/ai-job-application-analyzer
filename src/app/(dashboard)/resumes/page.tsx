@@ -7,7 +7,7 @@ export default async function ResumesPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const [resumes, jobs] = await Promise.all([
+  const [resumes, jobs, tailoredResumes] = await Promise.all([
     prisma.resume.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
@@ -25,7 +25,27 @@ export default async function ResumesPage() {
       },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.tailoredResume.findMany({
+      where: { userId: user.id },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        targetCompany: true,
+        targetRole: true,
+        matchScoreEstimate: true,
+        updatedAt: true,
+        jobId: true,
+      },
+    }),
   ]);
 
-  return <ResumesClient initialResumes={resumes} jobs={jobs} userId={user.id} />;
+  return (
+    <ResumesClient
+      initialResumes={resumes}
+      initialTailoredResumes={tailoredResumes}
+      jobs={jobs}
+      userId={user.id}
+    />
+  );
 }
