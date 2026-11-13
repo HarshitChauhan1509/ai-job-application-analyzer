@@ -27,8 +27,15 @@ import {
   Briefcase,
   Lightbulb,
   UserCheck,
+  CheckCircle2,
+  Globe,
+  SendHorizontal,
 } from "lucide-react";
-import { generateOutreachPitchAction } from "@/app/actions/outreach";
+import {
+  generateOutreachPitchAction,
+  getConnectedEmailAction,
+  sendDirectOutreachEmailAction,
+} from "@/app/actions/outreach";
 import { OutreachPitchResult } from "@/lib/ai/outreach-generator";
 import { useToast } from "@/hooks/use-toast";
 import { LowCreditsModal } from "@/components/credits/low-credits-modal";
@@ -80,6 +87,32 @@ export function OutreachModal({
 
   const [copied, setCopied] = useState(false);
   const [lowCreditsOpen, setLowCreditsOpen] = useState(false);
+
+  const [connectedEmail, setConnectedEmail] = useState<string | null>(null);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [includePortfolio, setIncludePortfolio] = useState(true);
+  const [isSendingDirect, setIsSendingDirect] = useState(false);
+  const [directSentSuccess, setDirectSentSuccess] = useState(false);
+
+  // Check connected Gmail account when modal opens
+  useEffect(() => {
+    if (open) {
+      setIsCheckingEmail(true);
+      setDirectSentSuccess(false);
+      getConnectedEmailAction()
+        .then((res) => {
+          setIsCheckingEmail(false);
+          if (res.isConnected && res.email) {
+            setConnectedEmail(res.email);
+          } else {
+            setConnectedEmail(null);
+          }
+        })
+        .catch(() => {
+          setIsCheckingEmail(false);
+        });
+    }
+  }, [open]);
 
   // Generate pitches when modal opens if not generated yet
   useEffect(() => {
@@ -152,6 +185,68 @@ export function OutreachModal({
       title: "Opening Email Client",
       description: "Drafting message in your default mail app.",
     });
+  };
+
+  const handleSendDirectGmail = async () => {
+    if (!recipientEmail || !recipientEmail.trim() || !recipientEmail.includes("@")) {
+      toast({
+        variant: "destructive",
+        title: "Recipient Email Required",
+        description: "Please specify a valid recipient email address to send directly via Gmail.",
+      });
+      return;
+    }
+
+    const subject = activeTab === "founder" ? founderSubject : recruiterSubject;
+    const body = activeTab === "founder" ? founderBody : recruiterBody;
+
+    setIsSendingDirect(true);
+    try {
+      const res = await sendDirectOutreachEmailAction({
+        applicationId,
+        recipientEmail: recipientEmail.trim(),
+        recipientName: recipientName.trim() || undefined,
+        subject,
+        body,
+        pitchType: activeTab as "founder" | "recruiter",
+        includePortfolioLink: includePortfolio,
+      });
+
+      if (res.success) {
+        setDirectSentSuccess(true);
+        toast({
+          title: "🚀 Outreach Dispatched Successfully!",
+          description: `Sent directly from ${res.sentFrom} to ${recipientEmail.trim()}.${
+            res.autoUpdatedStatus
+              ? ' Application automatically moved to "APPLIED"!'
+              : ""
+          }${res.isSimulated ? " (Demo Simulator Mode)" : ""}`,
+        });
+      } else {
+        if (res.error === "NO_GMAIL_CONNECTED") {
+          toast({
+            variant: "destructive",
+            title: "Gmail Not Connected",
+            description:
+              "Please connect your Gmail account in the Mailbox Sync dialog on the Kanban board to enable 1-click dispatch.",
+          });
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Dispatch Failed",
+            description: res.error || "Failed to dispatch email via Gmail API.",
+          });
+        }
+      }
+    } catch {
+      toast({
+        variant: "destructive",
+        title: "Dispatch Error",
+        description: "An unexpected error occurred while sending the email.",
+      });
+    } finally {
+      setIsSendingDirect(false);
+    }
   };
 
   return (
@@ -244,33 +339,81 @@ export function OutreachModal({
               </button>
             </div>
 
-            {/* Recipient Details Inputs */}
+            {/* Recipient Details & Mailbox Connection */}
             {activeTab !== "linkedin" && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="space-y-1">
-                  <Label htmlFor="pitch-recipient-name" className="text-[11px] font-semibold text-muted-foreground">
-                    Recipient Name / Title
-                  </Label>
-                  <Input
-                    id="pitch-recipient-name"
-                    value={recipientName}
-                    onChange={(e) => setRecipientName(e.target.value)}
-                    placeholder="e.g. Alex (CEO) or Hiring Team"
-                    className="h-8 text-xs"
-                  />
+              <div className="space-y-3">
+                {/* Mailbox Connection Status Bar */}
+                {isCheckingEmail ? (
+                  <div className="flex items-center gap-2 p-2 rounded-md bg-muted/40 border border-border/50 text-[11px] text-muted-foreground animate-pulse">
+                    <Loader2 size={12} className="animate-spin" />
+                    <span>Checking connected Gmail mailbox...</span>
+                  </div>
+                ) : connectedEmail ? (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                      </span>
+                      <span className="text-[11px] text-foreground font-medium">
+                        Connected Mailbox: <strong className="font-semibold text-emerald-600 dark:text-emerald-400">{connectedEmail}</strong>
+                      </span>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-semibold py-0">
+                      1-Click Send Ready
+                    </Badge>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs text-amber-700 dark:text-amber-400">
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <Mail size={13} className="shrink-0" />
+                      <span>No Gmail inbox connected yet. You can still send via your desktop mail app or connect in Kanban toolbar.</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recipient Inputs */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1">
+                    <Label htmlFor="pitch-recipient-name" className="text-[11px] font-semibold text-muted-foreground">
+                      Recipient Name / Title
+                    </Label>
+                    <Input
+                      id="pitch-recipient-name"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      placeholder="e.g. Alex (CEO) or Hiring Team"
+                      className="h-8 text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="pitch-recipient-email" className="text-[11px] font-semibold text-muted-foreground">
+                      Recipient Email {connectedEmail ? <span className="text-primary font-bold">(required for 1-click send)</span> : "(optional)"}
+                    </Label>
+                    <Input
+                      id="pitch-recipient-email"
+                      type="email"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                      placeholder="e.g. alex@startup.com"
+                      className="h-8 text-xs font-mono"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <Label htmlFor="pitch-recipient-email" className="text-[11px] font-semibold text-muted-foreground">
-                    Recipient Email (optional)
-                  </Label>
-                  <Input
-                    id="pitch-recipient-email"
-                    type="email"
-                    value={recipientEmail}
-                    onChange={(e) => setRecipientEmail(e.target.value)}
-                    placeholder="e.g. alex@startup.com"
-                    className="h-8 text-xs font-mono"
+                {/* Portfolio Link Inclusion Toggle */}
+                <div className="flex items-center justify-between p-2 rounded-md bg-muted/40 border border-border/50 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Globe size={13} className="text-primary" />
+                    <span className="text-[11px] font-medium text-foreground">Attach candidate public portfolio &amp; proof-of-work link</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    id="include-portfolio"
+                    checked={includePortfolio}
+                    onChange={(e) => setIncludePortfolio(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-border text-primary focus:ring-primary cursor-pointer"
                   />
                 </div>
               </div>
@@ -407,24 +550,60 @@ export function OutreachModal({
                 variant="outline"
                 size="sm"
                 onClick={handleCopyCurrent}
-                disabled={isPending || !pitches}
+                disabled={isPending || !pitches || isSendingDirect}
                 className="text-xs h-8 gap-1.5"
               >
                 {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
-                {copied ? "Copied" : "Copy to Clipboard"}
+                {copied ? "Copied" : "Copy"}
               </Button>
 
               {activeTab !== "linkedin" && (
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleLaunchEmail}
-                  disabled={isPending || !pitches}
-                  className="text-xs h-8 gap-1.5 shadow-sm"
-                >
-                  <Send size={13} />
-                  <span>Send via Email Client</span>
-                </Button>
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLaunchEmail}
+                    disabled={isPending || !pitches || isSendingDirect}
+                    className="text-xs h-8 gap-1.5 text-muted-foreground hover:text-foreground"
+                    title="Draft in default email client (mailto:)"
+                  >
+                    <Mail size={13} />
+                    <span className="hidden sm:inline">Mail Client</span>
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleSendDirectGmail}
+                    disabled={isPending || !pitches || isSendingDirect || !connectedEmail}
+                    className={`text-xs h-8 gap-1.5 font-semibold text-white shadow-sm transition-all ${
+                      directSentSuccess
+                        ? "bg-emerald-600 hover:bg-emerald-700"
+                        : "bg-primary hover:bg-primary/90"
+                    }`}
+                    title={
+                      !connectedEmail
+                        ? "Connect Gmail in Kanban toolbar to enable 1-click dispatch"
+                        : "Send directly from your verified Gmail address"
+                    }
+                  >
+                    {isSendingDirect ? (
+                      <Loader2 size={13} className="animate-spin text-white" />
+                    ) : directSentSuccess ? (
+                      <CheckCircle2 size={13} className="text-white" />
+                    ) : (
+                      <SendHorizontal size={13} />
+                    )}
+                    <span>
+                      {isSendingDirect
+                        ? "Sending..."
+                        : directSentSuccess
+                        ? "Dispatched!"
+                        : "Send via Connected Gmail"}
+                    </span>
+                  </Button>
+                </>
               )}
             </div>
           </div>
