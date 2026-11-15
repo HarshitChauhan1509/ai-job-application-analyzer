@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/dialog";
 import { createAndAnalyzeJobAction, scrapeJobUrlAction, deleteJobAction, analyzeJobImagesAction } from "@/app/actions/job";
 import { createApplicationAction } from "@/app/actions/application";
+import { QuickJobClipDialog } from "@/components/dashboard/quick-job-clip-dialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface JobAnalysisData {
@@ -507,7 +508,8 @@ export default function JobsClient({
             Import from JD links or text, extract requirements, and assess your fit.
           </p>
         </div>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto shrink-0 flex-wrap">
+          <QuickJobClipDialog />
           <Link href="/jobs/explore" className="w-full sm:w-auto">
             <Button variant="outline" className="w-full gap-1.5 border-dashed">
               <Flame className="h-4 w-4 text-primary" />
