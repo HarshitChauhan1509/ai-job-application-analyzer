@@ -28,24 +28,37 @@ import {
   Sun,
   Moon,
   Laptop,
+  Flame,
+  BarChart3,
+  CreditCard,
+  User,
+  Paperclip,
+  Share2,
+  Mail,
+  Zap,
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { globalSearchAction, SearchResultItem } from "@/app/actions/search";
+import { useToast } from "@/hooks/use-toast";
+import { QuickJobClipDialog } from "./quick-job-clip-dialog";
 
 export function GlobalSearch() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { toast } = useToast();
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
+  const [publicPortfolioUrl, setPublicPortfolioUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [clipDialogOpen, setClipDialogOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Open on Cmd+K or Ctrl+K
+  // Keyboard shortcut listener: Cmd+K (Mac) or Ctrl+K (Windows/Linux)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.key === "k" || e.key === "K") && (e.metaKey || e.ctrlKey)) {
@@ -65,6 +78,9 @@ export function GlobalSearch() {
       const res = await globalSearchAction(searchQuery);
       if (res.success && res.results) {
         setResults(res.results);
+        if (res.publicPortfolioUrl) {
+          setPublicPortfolioUrl(res.publicPortfolioUrl);
+        }
       }
     } catch (err) {
       console.error("Global search error:", err);
@@ -78,20 +94,46 @@ export function GlobalSearch() {
 
     const timer = setTimeout(() => {
       fetchResults(query);
-    }, 150);
+    }, 120);
 
     return () => clearTimeout(timer);
   }, [open, query, fetchResults]);
 
-  const handleSelect = (url: string) => {
+  const handleSelect = (url: string, id?: string) => {
     setOpen(false);
+
+    if (id === "act-clip-job" || url === "/applications?action=clip") {
+      setClipDialogOpen(true);
+      return;
+    }
+
+    if (id === "act-copy-portfolio") {
+      if (publicPortfolioUrl) {
+        navigator.clipboard?.writeText(publicPortfolioUrl);
+        toast({
+          title: "Public Portfolio Link Copied",
+          description: publicPortfolioUrl,
+        });
+      } else {
+        router.push("/profile");
+      }
+      return;
+    }
+
     router.push(url);
   };
 
-  const navResults = results.filter((r) => r.category === "navigation");
+  const actionResults = results.filter((r) => r.category === "actions");
+  const appResults = results.filter((r) => r.category === "applications");
+  const tailoredResults = results.filter(
+    (r) => r.category === "resumes" && r.id.startsWith("tailored-")
+  );
+  const resumeResults = results.filter(
+    (r) => r.category === "resumes" && !r.id.startsWith("tailored-")
+  );
   const jobResults = results.filter((r) => r.category === "jobs");
-  const resumeResults = results.filter((r) => r.category === "resumes");
   const interviewResults = results.filter((r) => r.category === "interviews");
+  const navResults = results.filter((r) => r.category === "navigation");
 
   return (
     <>
@@ -99,10 +141,10 @@ export function GlobalSearch() {
       <Button
         variant="outline"
         onClick={() => setOpen(true)}
-        className="hidden sm:flex w-72 justify-start text-muted-foreground bg-muted/40 hover:bg-muted/70 border-border/80 h-9 px-3 transition-colors"
+        className="hidden sm:flex w-72 justify-start text-muted-foreground bg-muted/40 hover:bg-muted/70 border-border/80 h-9 px-3 transition-colors cursor-pointer"
       >
         <Search size={15} className="mr-2 text-muted-foreground shrink-0" />
-        <span className="text-xs truncate">Search jobs, resumes, tools...</span>
+        <span className="text-xs truncate">Type a command or search...</span>
         <kbd className="pointer-events-none ml-auto inline-flex h-5 select-none items-center gap-0.5 rounded border border-border bg-background px-1.5 font-mono text-[10px] font-semibold text-muted-foreground">
           <span className="text-xs">⌘</span>K
         </kbd>
@@ -123,12 +165,12 @@ export function GlobalSearch() {
       <CommandDialog open={open} onOpenChange={setOpen}>
         <Command className="rounded-xl border-0">
           <CommandInput
-            placeholder="Type to search applications, resumes, mock interviews, or jump to a page..."
+            placeholder="Type a command, job title, company, or jump to page..."
             value={query}
             onValueChange={setQuery}
           />
 
-          <CommandList className="max-h-[360px] py-2">
+          <CommandList className="max-h-[380px] py-2">
             {loading && (
               <div className="flex items-center justify-center py-6 text-muted-foreground gap-2 text-xs">
                 <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -138,27 +180,25 @@ export function GlobalSearch() {
 
             {!loading && results.length === 0 && (
               <CommandEmpty className="py-8 text-center text-xs text-muted-foreground">
-                No matching jobs, resumes, or tools found.
+                No matching applications, jobs, or commands found.
               </CommandEmpty>
             )}
 
-            {/* Quick Navigation Pages */}
-            {navResults.length > 0 && (
-              <CommandGroup heading="Pages & Tools">
-                {navResults.map((item) => (
+            {/* Quick Actions Group */}
+            {actionResults.length > 0 && (
+              <CommandGroup heading="⚡ Quick Actions">
+                {actionResults.map((item) => (
                   <CommandItem
                     key={item.id}
-                    value={`${item.title} ${item.subtitle}`}
-                    onSelect={() => handleSelect(item.url)}
-                    className="flex items-center justify-between py-2.5 px-3 cursor-pointer"
+                    value={`${item.title} ${item.subtitle} action`}
+                    onSelect={() => handleSelect(item.url, item.id)}
+                    className="flex items-center justify-between py-2 px-3 cursor-pointer"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      {item.url === "/dashboard" && <LayoutDashboard className="h-4 w-4 text-primary shrink-0" />}
-                      {item.url === "/jobs" && <Briefcase className="h-4 w-4 text-blue-500 shrink-0" />}
-                      {item.url === "/applications" && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />}
-                      {item.url === "/resumes" && <FileText className="h-4 w-4 text-purple-500 shrink-0" />}
-                      {item.url === "/improve" && <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />}
-                      {item.url === "/coach" && <Mic className="h-4 w-4 text-rose-500 shrink-0" />}
+                      {item.id === "act-clip-job" && <Paperclip className="h-4 w-4 text-primary shrink-0" />}
+                      {item.id === "act-tailor-resume" && <Sparkles className="h-4 w-4 text-purple-500 shrink-0" />}
+                      {item.id === "act-mock-interview" && <Mic className="h-4 w-4 text-rose-500 shrink-0" />}
+                      {item.id === "act-sync-mailbox" && <Mail className="h-4 w-4 text-blue-500 shrink-0" />}
 
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
@@ -167,30 +207,49 @@ export function GlobalSearch() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-muted/30">
+                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-primary/10 text-primary border-primary/20">
                         {item.badge}
                       </Badge>
                       <ArrowRight className="h-3 w-3 text-muted-foreground opacity-50" />
                     </div>
                   </CommandItem>
                 ))}
+
+                {publicPortfolioUrl && (
+                  <CommandItem
+                    value="copy public portfolio link share candidate profile"
+                    onSelect={() => handleSelect("", "act-copy-portfolio")}
+                    className="flex items-center justify-between py-2 px-3 cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Share2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-foreground truncate">Copy Public Portfolio Link</p>
+                        <p className="text-[11px] text-muted-foreground truncate">{publicPortfolioUrl}</p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                      1-Click Copy
+                    </Badge>
+                  </CommandItem>
+                )}
               </CommandGroup>
             )}
 
-            {/* Jobs & Pipeline */}
-            {jobResults.length > 0 && (
+            {/* Applications & Pipeline */}
+            {appResults.length > 0 && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading="Saved Jobs & Applications">
-                  {jobResults.map((item) => (
+                <CommandGroup heading="🚀 Applications & Pipeline">
+                  {appResults.map((item) => (
                     <CommandItem
                       key={item.id}
-                      value={`${item.title} ${item.subtitle} job`}
+                      value={`${item.title} ${item.subtitle} application pipeline`}
                       onSelect={() => handleSelect(item.url)}
-                      className="flex items-center justify-between py-2.5 px-3 cursor-pointer"
+                      className="flex items-center justify-between py-2 px-3 cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <Building className="h-4 w-4 text-blue-600 shrink-0" />
+                        <Building className="h-4 w-4 text-blue-500 shrink-0" />
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-foreground truncate">{item.title}</p>
                           <p className="text-[11px] text-muted-foreground truncate">{item.subtitle}</p>
@@ -200,7 +259,17 @@ export function GlobalSearch() {
                       <div className="flex items-center gap-2 shrink-0">
                         <Badge
                           variant="secondary"
-                          className="text-[10px] font-semibold py-0 px-1.5 bg-blue-500/10 text-blue-700 dark:text-blue-300 border-0"
+                          className={`text-[10px] font-semibold py-0 px-1.5 ${
+                            item.badge === "OFFER"
+                              ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                              : item.badge === "INTERVIEW"
+                              ? "bg-purple-500/15 text-purple-700 dark:text-purple-300"
+                              : item.badge === "SCREENING"
+                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                              : item.badge === "APPLIED"
+                              ? "bg-blue-500/15 text-blue-700 dark:text-blue-300"
+                              : "bg-muted text-muted-foreground"
+                          }`}
                         >
                           {item.badge}
                         </Badge>
@@ -212,20 +281,20 @@ export function GlobalSearch() {
               </>
             )}
 
-            {/* Resumes */}
-            {resumeResults.length > 0 && (
+            {/* Tailored Resumes */}
+            {tailoredResults.length > 0 && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading="Resumes & Role Profiles">
-                  {resumeResults.map((item) => (
+                <CommandGroup heading="📄 Role-Specific Tailored Resumes">
+                  {tailoredResults.map((item) => (
                     <CommandItem
                       key={item.id}
-                      value={`${item.title} ${item.subtitle} resume`}
+                      value={`${item.title} ${item.subtitle} tailored resume`}
                       onSelect={() => handleSelect(item.url)}
-                      className="flex items-center justify-between py-2.5 px-3 cursor-pointer"
+                      className="flex items-center justify-between py-2 px-3 cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <FileText className="h-4 w-4 text-purple-600 shrink-0" />
+                        <Sparkles className="h-4 w-4 text-purple-500 shrink-0" />
                         <div className="min-w-0">
                           <p className="text-xs font-bold text-foreground truncate">{item.title}</p>
                           <p className="text-[11px] text-muted-foreground truncate">{item.subtitle}</p>
@@ -237,6 +306,38 @@ export function GlobalSearch() {
                           variant="outline"
                           className="text-[10px] font-semibold py-0 px-1.5 bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20"
                         >
+                          Tailor Studio
+                        </Badge>
+                        <ArrowRight className="h-3 w-3 text-muted-foreground opacity-50" />
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </>
+            )}
+
+            {/* Saved Jobs */}
+            {jobResults.length > 0 && (
+              <>
+                <CommandSeparator />
+                <CommandGroup heading="💼 Saved Jobs">
+                  {jobResults.map((item) => (
+                    <CommandItem
+                      key={item.id}
+                      value={`${item.title} ${item.subtitle} job`}
+                      onSelect={() => handleSelect(item.url)}
+                      className="flex items-center justify-between py-2 px-3 cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Briefcase className="h-4 w-4 text-blue-600 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-foreground truncate">{item.title}</p>
+                          <p className="text-[11px] text-muted-foreground truncate">{item.subtitle}</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant="outline" className="text-[10px] py-0 px-1.5">
                           {item.badge}
                         </Badge>
                         <ArrowRight className="h-3 w-3 text-muted-foreground opacity-50" />
@@ -247,32 +348,38 @@ export function GlobalSearch() {
               </>
             )}
 
-            {/* Practice Interviews */}
-            {interviewResults.length > 0 && (
+            {/* Pages & Navigation */}
+            {navResults.length > 0 && (
               <>
                 <CommandSeparator />
-                <CommandGroup heading="Practice Mock Interviews">
-                  {interviewResults.map((item) => (
+                <CommandGroup heading="🧭 Pages & Navigation">
+                  {navResults.map((item) => (
                     <CommandItem
                       key={item.id}
-                      value={`${item.title} ${item.subtitle} interview`}
+                      value={`${item.title} ${item.subtitle} page nav`}
                       onSelect={() => handleSelect(item.url)}
-                      className="flex items-center justify-between py-2.5 px-3 cursor-pointer"
+                      className="flex items-center justify-between py-2 px-3 cursor-pointer"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <Mic className="h-4 w-4 text-rose-600 shrink-0" />
+                        {item.url === "/dashboard" && <LayoutDashboard className="h-4 w-4 text-primary shrink-0" />}
+                        {item.url === "/jobs/explore" && <Flame className="h-4 w-4 text-amber-500 shrink-0" />}
+                        {item.url === "/applications" && <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />}
+                        {item.url === "/analytics" && <BarChart3 className="h-4 w-4 text-blue-500 shrink-0" />}
+                        {item.url === "/resumes" && <FileText className="h-4 w-4 text-purple-500 shrink-0" />}
+                        {item.url === "/coach" && <Mic className="h-4 w-4 text-rose-500 shrink-0" />}
+                        {item.url === "/improve" && <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />}
+                        {item.url === "/dashboard/billing" && <CreditCard className="h-4 w-4 text-emerald-600 shrink-0" />}
+                        {item.url === "/profile" && <User className="h-4 w-4 text-foreground shrink-0" />}
+
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-foreground truncate">{item.title}</p>
+                          <p className="text-xs font-semibold text-foreground truncate">{item.title}</p>
                           <p className="text-[11px] text-muted-foreground truncate">{item.subtitle}</p>
                         </div>
                       </div>
 
                       <div className="flex items-center gap-2 shrink-0">
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-semibold py-0 px-1.5 bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20"
-                        >
-                          Score: {item.badge}
+                        <Badge variant="outline" className="text-[10px] py-0 px-1.5 bg-muted/30">
+                          {item.badge}
                         </Badge>
                         <ArrowRight className="h-3 w-3 text-muted-foreground opacity-50" />
                       </div>
@@ -284,7 +391,7 @@ export function GlobalSearch() {
 
             {/* Appearance & Themes */}
             <CommandSeparator />
-            <CommandGroup heading="Appearance & Themes">
+            <CommandGroup heading="🎨 Appearance & Themes">
               <CommandItem
                 value="theme light mode appearance switch color brightness"
                 onSelect={() => {
@@ -343,8 +450,26 @@ export function GlobalSearch() {
               </CommandItem>
             </CommandGroup>
           </CommandList>
+
+          <div className="flex items-center justify-between px-3 py-2 border-t border-border/40 text-[11px] text-muted-foreground bg-muted/20">
+            <span className="flex items-center gap-1.5 font-mono">
+              <kbd className="px-1 py-0.5 rounded border border-border bg-background text-[10px]">↑↓</kbd> navigate
+              <span className="mx-1">•</span>
+              <kbd className="px-1 py-0.5 rounded border border-border bg-background text-[10px]">↵</kbd> select
+              <span className="mx-1">•</span>
+              <kbd className="px-1 py-0.5 rounded border border-border bg-background text-[10px]">esc</kbd> close
+            </span>
+            <span className="font-semibold text-primary/80">CareerPilot Command</span>
+          </div>
         </Command>
       </CommandDialog>
+
+      {/* Embedded Job Clip Dialog triggerable directly from command palette */}
+      <QuickJobClipDialog
+        triggerButton={null}
+        open={clipDialogOpen}
+        onOpenChange={setClipDialogOpen}
+      />
     </>
   );
 }
