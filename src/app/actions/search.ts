@@ -9,12 +9,13 @@ export interface SearchResultItem {
   subtitle: string;
   badge?: string;
   url: string;
-  category: "navigation" | "jobs" | "resumes" | "interviews";
+  category: "navigation" | "applications" | "jobs" | "resumes" | "interviews" | "actions";
 }
 
 export async function globalSearchAction(query: string = ""): Promise<{
   success: boolean;
   results: SearchResultItem[];
+  publicPortfolioUrl?: string | null;
 }> {
   try {
     const user = await getCurrentUser();
@@ -33,52 +34,112 @@ export async function globalSearchAction(query: string = ""): Promise<{
         badge: "Page",
       },
       {
-        id: "nav-jobs",
-        title: "Saved Jobs & Postings",
-        subtitle: "Manage imported job descriptions and track fit",
-        url: "/jobs",
+        id: "nav-explore",
+        title: "Explore Curated Startups",
+        subtitle: "Verified tech roles with salary ranges and equity stakes",
+        url: "/jobs/explore",
         category: "navigation",
-        badge: "Page",
+        badge: "Hot",
       },
       {
         id: "nav-apps",
         title: "Application Pipeline Tracker",
-        subtitle: "Kanban board tracking Applied, Interviewing, Offer stages",
+        subtitle: "Kanban board tracking Saved, Applied, Interview, and Offer stages",
         url: "/applications",
         category: "navigation",
         badge: "Pipeline",
       },
       {
+        id: "nav-analytics",
+        title: "Funnel & Conversion Analytics",
+        subtitle: "Pipeline drop-off, ATS correlation, and response velocity metrics",
+        url: "/analytics",
+        category: "navigation",
+        badge: "Analytics",
+      },
+      {
         id: "nav-resumes",
-        title: "Resumes & Role Profiles",
-        subtitle: "Upload & organize multiple targeted resume versions",
+        title: "Resumes & Tailor Studio",
+        subtitle: "Upload master resumes and generate role-specific ATS variants",
         url: "/resumes",
         category: "navigation",
         badge: "Hub",
       },
       {
+        id: "nav-jobs",
+        title: "Saved Jobs & Postings",
+        subtitle: "Manage imported job descriptions and assess fit",
+        url: "/jobs",
+        category: "navigation",
+        badge: "Page",
+      },
+      {
+        id: "nav-coach",
+        title: "AI Voice Interview Coach",
+        subtitle: "Simulate natural speech technical and behavioral practice loops",
+        url: "/coach",
+        category: "navigation",
+        badge: "AI Coach",
+      },
+      {
         id: "nav-improve",
-        title: "AI Resume Improver",
+        title: "STAR Resume Improver",
         subtitle: "Optimize bullet points using the Google X-Y-Z formula",
         url: "/improve",
         category: "navigation",
         badge: "AI Tool",
       },
       {
-        id: "nav-coach",
-        title: "AI Interview Coach",
-        subtitle: "Simulate technical and behavioral practice sessions",
-        url: "/coach",
+        id: "nav-billing",
+        title: "Billing & AI Credits",
+        subtitle: "Manage subscription plans, check balances, and top up credits",
+        url: "/dashboard/billing",
         category: "navigation",
-        badge: "AI Tool",
+        badge: "Billing",
       },
       {
         id: "nav-profile",
-        title: "Candidate Profile & Details",
-        subtitle: "View and edit your professional headline, bio, and portfolio links",
+        title: "Candidate Profile & Portfolio",
+        subtitle: "Manage public portfolio, GitHub proof-of-work, and timeline",
         url: "/profile",
         category: "navigation",
         badge: "Profile",
+      },
+    ];
+
+    // Quick AI Actions
+    const quickActions: SearchResultItem[] = [
+      {
+        id: "act-clip-job",
+        title: "Clip / Import Job Description",
+        subtitle: "Paste raw job spec or URL to auto-extract skills and add to Kanban",
+        url: "/applications?action=clip",
+        category: "actions",
+        badge: "1-Click",
+      },
+      {
+        id: "act-tailor-resume",
+        title: "Tailor Resume for Role",
+        subtitle: "Generate an ATS-optimized, single-page printable PDF resume",
+        url: "/resumes",
+        category: "actions",
+        badge: "Resume",
+      },
+      {
+        id: "act-mock-interview",
+        title: "Start Voice Mock Interview",
+        subtitle: "Launch a speech-tracked simulation with senior STAR answers",
+        url: "/coach",
+        category: "actions",
+        badge: "Practice",
+      },
+      {
+        id: "act-sync-mailbox",
+        title: "Sync Recruiter Mailbox",
+        subtitle: "Scan connected Gmail inbox for interview invites and ATS updates",
+        url: "/applications?action=sync",
+        category: "actions",
+        badge: "Gmail",
       },
     ];
 
@@ -90,112 +151,180 @@ export async function globalSearchAction(query: string = ""): Promise<{
             p.subtitle.toLowerCase().includes(q)
         );
 
+    const matchedActions = !q
+      ? quickActions
+      : quickActions.filter(
+          (a) =>
+            a.title.toLowerCase().includes(q) ||
+            a.subtitle.toLowerCase().includes(q)
+        );
+
     if (!userId) {
-      return { success: true, results: matchedPages };
+      return { success: true, results: [...matchedActions, ...matchedPages] };
     }
 
-    // 2. Fetch Jobs, Resumes, and Interview Sessions
-    const [jobs, resumes, interviewSessions] = await Promise.all([
-      prisma.job.findMany({
-        where: {
-          userId,
-          ...(q
-            ? {
-                OR: [
-                  { position: { contains: q, mode: "insensitive" } },
-                  { company: { contains: q, mode: "insensitive" } },
-                  { location: { contains: q, mode: "insensitive" } },
-                ],
-              }
-            : {}),
-        },
-        include: {
-          applications: {
-            select: { status: true },
+    // 2. Fetch User Profile, Applications, Tailored Resumes, Jobs, Resumes, and Interview Sessions
+    const [profile, applications, tailoredResumes, jobs, resumes, interviewSessions] =
+      await Promise.all([
+        prisma.profile.findUnique({
+          where: { userId },
+          select: { username: true },
+        }),
+        prisma.application.findMany({
+          where: {
+            userId,
+            ...(q
+              ? {
+                  OR: [
+                    { job: { position: { contains: q, mode: "insensitive" } } },
+                    { job: { company: { contains: q, mode: "insensitive" } } },
+                    { status: { contains: q, mode: "insensitive" } },
+                  ] as any,
+                }
+              : {}),
           },
-        },
-        take: 8,
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.resume.findMany({
-        where: {
-          userId,
-          ...(q
-            ? {
-                OR: [
-                  { name: { contains: q, mode: "insensitive" } },
-                  { targetRole: { contains: q, mode: "insensitive" } },
-                  { targetCompany: { contains: q, mode: "insensitive" } },
-                  { tags: { contains: q, mode: "insensitive" } },
-                  { resumeType: { contains: q, mode: "insensitive" } },
-                ],
-              }
-            : {}),
-        },
-        include: {
-          analysis: {
-            select: { overallScore: true },
+          include: {
+            job: {
+              select: { company: true, position: true, location: true },
+            },
           },
-        },
-        take: 6,
-        orderBy: { createdAt: "desc" },
-      }),
-      prisma.interviewSession.findMany({
-        where: {
-          userId,
-          ...(q
-            ? {
-                OR: [
-                  { role: { contains: q, mode: "insensitive" } },
-                  { difficulty: { contains: q, mode: "insensitive" } },
-                ],
-              }
-            : {}),
-        },
-        take: 5,
-        orderBy: { createdAt: "desc" },
-      }),
-    ]);
+          take: 8,
+          orderBy: { updatedAt: "desc" },
+        }),
+        prisma.tailoredResume.findMany({
+          where: {
+            userId,
+            ...(q
+              ? {
+                  OR: [
+                    { targetRole: { contains: q, mode: "insensitive" } },
+                    { targetCompany: { contains: q, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
+          take: 5,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.job.findMany({
+          where: {
+            userId,
+            ...(q
+              ? {
+                  OR: [
+                    { position: { contains: q, mode: "insensitive" } },
+                    { company: { contains: q, mode: "insensitive" } },
+                    { location: { contains: q, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
+          take: 6,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.resume.findMany({
+          where: {
+            userId,
+            ...(q
+              ? {
+                  OR: [
+                    { name: { contains: q, mode: "insensitive" } },
+                    { targetRole: { contains: q, mode: "insensitive" } },
+                    { targetCompany: { contains: q, mode: "insensitive" } },
+                    { tags: { contains: q, mode: "insensitive" } },
+                    { resumeType: { contains: q, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
+          include: {
+            analysis: {
+              select: { overallScore: true },
+            },
+          },
+          take: 5,
+          orderBy: { createdAt: "desc" },
+        }),
+        prisma.interviewSession.findMany({
+          where: {
+            userId,
+            ...(q
+              ? {
+                  OR: [
+                    { role: { contains: q, mode: "insensitive" } },
+                    { difficulty: { contains: q, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
+          take: 4,
+          orderBy: { createdAt: "desc" },
+        }),
+      ]);
 
-    const jobResults: SearchResultItem[] = jobs.map((job) => {
-      const app = job.applications[0];
-      return {
-        id: `job-${job.id}`,
-        title: job.position,
-        subtitle: `${job.company}${job.location ? ` • ${job.location}` : ""}`,
-        badge: app ? app.status : "SAVED",
-        url: `/jobs`,
-        category: "jobs",
-      };
-    });
+    const applicationResults: SearchResultItem[] = applications.map((app) => ({
+      id: `app-${app.id}`,
+      title: `${app.job.position} • ${app.job.company}`,
+      subtitle: `Stage: ${app.status} • Location: ${app.job.location || "Remote"}`,
+      badge: app.status,
+      url: `/applications/${app.id}`,
+      category: "applications",
+    }));
 
-    const resumeResults: SearchResultItem[] = resumes.map((res) => {
-      return {
-        id: `resume-${res.id}`,
-        title: res.name,
-        subtitle: res.targetRole ? `Target: ${res.targetRole}` : "General Software Engineer",
-        badge: res.analysis?.overallScore
-          ? `${res.analysis.overallScore}% ATS`
-          : res.resumeType || "Resume",
-        url: `/resumes/${res.id}`,
-        category: "resumes",
-      };
-    });
+    const tailoredResults: SearchResultItem[] = tailoredResumes.map((tr) => ({
+      id: `tailored-${tr.id}`,
+      title: `Tailored: ${tr.targetRole}`,
+      subtitle: `${tr.targetCompany} • ${tr.matchScoreEstimate ? `${tr.matchScoreEstimate}% ATS Fit` : "ATS Optimized"}`,
+      badge: "Tailored PDF",
+      url: `/resumes/tailor/${tr.id}`,
+      category: "resumes",
+    }));
 
-    const interviewResults: SearchResultItem[] = interviewSessions.map((session) => {
-      return {
-        id: `interview-${session.id}`,
-        title: `${session.role} Mock Interview`,
-        subtitle: `${session.difficulty} level simulation`,
-        badge: session.overallScore ? `${session.overallScore}/10` : "Practice",
-        url: `/coach/session?sessionId=${session.id}`,
-        category: "interviews",
-      };
-    });
+    const jobResults: SearchResultItem[] = jobs.map((job) => ({
+      id: `job-${job.id}`,
+      title: job.position,
+      subtitle: `${job.company}${job.location ? ` • ${job.location}` : ""}`,
+      badge: "Saved Job",
+      url: `/jobs`,
+      category: "jobs",
+    }));
+
+    const resumeResults: SearchResultItem[] = resumes.map((res) => ({
+      id: `resume-${res.id}`,
+      title: res.name,
+      subtitle: res.targetRole ? `Target: ${res.targetRole}` : "Primary Master Resume",
+      badge: res.analysis?.overallScore
+        ? `${res.analysis.overallScore}% ATS`
+        : res.resumeType || "Resume",
+      url: `/resumes`,
+      category: "resumes",
+    }));
+
+    const interviewResults: SearchResultItem[] = interviewSessions.map((session) => ({
+      id: `interview-${session.id}`,
+      title: `${session.role} Mock Interview`,
+      subtitle: `${session.difficulty} level simulation`,
+      badge: session.overallScore ? `${session.overallScore}/10` : "Practice",
+      url: `/coach`,
+      category: "interviews",
+    }));
+
+    const publicPortfolioUrl = profile?.username
+      ? `https://careerpilot.app/p/${profile.username}`
+      : null;
 
     return {
       success: true,
-      results: [...matchedPages, ...jobResults, ...resumeResults, ...interviewResults],
+      publicPortfolioUrl,
+      results: [
+        ...matchedActions,
+        ...applicationResults,
+        ...tailoredResults,
+        ...jobResults,
+        ...resumeResults,
+        ...interviewResults,
+        ...matchedPages,
+      ],
     };
   } catch (error) {
     console.error("Global search error:", error);
