@@ -66,10 +66,21 @@ Requirements:
 
 export function QuickJobClipDialog({
   triggerButton,
+  open: controlledOpen,
+  onOpenChange: setControlledOpen,
 }: {
   triggerButton?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = (val: boolean) => {
+    if (setControlledOpen) setControlledOpen(val);
+    else setInternalOpen(val);
+  };
+
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const router = useRouter();
@@ -155,7 +166,7 @@ export function QuickJobClipDialog({
 
   return (
     <>
-      {triggerButton ? (
+      {triggerButton === null ? null : triggerButton ? (
         <div onClick={() => setOpen(true)} className="inline-block cursor-pointer">
           {triggerButton}
         </div>
