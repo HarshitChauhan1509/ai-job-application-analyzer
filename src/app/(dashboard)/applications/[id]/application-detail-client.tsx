@@ -31,9 +31,12 @@ import {
   Target,
   Briefcase,
   Printer,
+  Clock,
+  XCircle,
 } from "lucide-react";
 import { OutreachModal } from "@/components/dashboard/outreach-modal";
 import { TailorResumeDialog } from "@/components/resumes/tailor-resume-dialog";
+import { FollowUpNudgeDialog } from "@/components/dashboard/followup-nudge-dialog";
 import {
   updateApplicationStatusAction,
   updateApplicationDetailsAction,
@@ -77,6 +80,11 @@ export interface ApplicationDetailData {
   status: string;
   notes: string | null;
   resumeId: string | null;
+  followUpDueAt?: string | Date | null;
+  followUpStatus?: string | null;
+  followUpCount?: number;
+  outreachRecipientEmail?: string | null;
+  outreachRecipientName?: string | null;
   createdAt: string | Date;
   updatedAt: string | Date;
   job: {
@@ -123,8 +131,15 @@ function getEventBadgeInfo(type: string) {
     case "EMAIL_RECEIVED":
     case "GMAIL_SYNC":
       return { icon: Mail, color: "bg-emerald-500 text-white", label: "Recruiter Email" };
+    case "OUTREACH_SENT":
+    case "OUTREACH_FOLLOW_UP_SENT":
+      return { icon: Send, color: "bg-blue-600 text-white", label: "Outreach Sent" };
     case "OUTREACH_GENERATED":
       return { icon: Send, color: "bg-blue-500 text-white", label: "Outreach Pitch" };
+    case "FOLLOW_UP_SCHEDULED":
+      return { icon: Clock, color: "bg-amber-500 text-white", label: "Follow-Up Scheduled" };
+    case "FOLLOW_UP_DISMISSED":
+      return { icon: XCircle, color: "bg-muted text-muted-foreground", label: "Follow-Up Dismissed" };
     case "RESUME_TAILORED":
       return { icon: Printer, color: "bg-violet-500 text-white", label: "Tailored Resume" };
     case "STATUS_CHANGE":
@@ -338,6 +353,8 @@ export function ApplicationDetailClient({
             </select>
           </div>
 
+          <FollowUpNudgeDialog />
+
           <Button
             onClick={() => setOutreachOpen(true)}
             className="gap-1.5 shadow-sm bg-primary text-primary-foreground text-xs h-9 px-3.5"
@@ -393,6 +410,20 @@ export function ApplicationDetailClient({
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
+              {initialApplication.followUpStatus && initialApplication.followUpStatus !== "NONE" && (
+                <div className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
+                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                    <Clock size={14} className="shrink-0" />
+                    <span>
+                      Follow-up Reminder: <strong>{initialApplication.followUpStatus}</strong>
+                      {initialApplication.followUpDueAt && ` • Due ${new Date(initialApplication.followUpDueAt).toLocaleDateString()}`}
+                      {initialApplication.followUpCount ? ` (${initialApplication.followUpCount} sent)` : ""}
+                    </span>
+                  </div>
+                  <FollowUpNudgeDialog />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">
