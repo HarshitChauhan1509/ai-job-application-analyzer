@@ -15,6 +15,7 @@ import { OutreachModal } from "@/components/dashboard/outreach-modal";
 import { QuickEmailLogDialog } from "@/components/dashboard/quick-email-log-dialog";
 import { MailboxSyncDialog } from "@/components/dashboard/mailbox-sync-dialog";
 import { QuickJobClipDialog } from "@/components/dashboard/quick-job-clip-dialog";
+import { FollowUpNudgeDialog } from "@/components/dashboard/followup-nudge-dialog";
 
 // Mock data types
 type Application = {
@@ -199,6 +200,7 @@ export function KanbanBoard({ initialApplications = [] }: { initialApplications?
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <FollowUpNudgeDialog />
           <QuickJobClipDialog />
           <MailboxSyncDialog />
           <QuickEmailLogDialog />
