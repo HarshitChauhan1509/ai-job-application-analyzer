@@ -292,11 +292,19 @@ export async function sendDirectOutreachEmailAction(
           ? `${application.notes}\n\n[${new Date().toLocaleDateString()}] Sent cold outreach to ${params.recipientEmail} (${params.pitchType === "founder" ? "Founder Pitch" : "Tech Lead Note"}): "${params.subject}"`
           : `[${new Date().toLocaleDateString()}] Sent cold outreach to ${params.recipientEmail} (${params.pitchType === "founder" ? "Founder Pitch" : "Tech Lead Note"}): "${params.subject}"`;
 
+        const followUpDue = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+
         await prisma.application.update({
           where: { id: application.id },
           data: {
             status: newStatus,
             notes: updatedNotes,
+            followUpDueAt: followUpDue,
+            followUpStatus: "SCHEDULED",
+            lastOutreachAt: new Date(),
+            outreachRecipientEmail: params.recipientEmail.trim(),
+            outreachRecipientName: params.recipientName?.trim() || null,
+            lastPitchSubject: params.subject.trim(),
           },
         });
 
