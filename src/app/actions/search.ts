@@ -2,6 +2,7 @@
 
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
+import { QUESTION_BANK } from "@/lib/interview-questions-bank";
 
 export interface SearchResultItem {
   id: string;
@@ -82,6 +83,14 @@ export async function globalSearchAction(query: string = ""): Promise<{
         badge: "AI Coach",
       },
       {
+        id: "nav-question-bank",
+        title: "Company Interview Question Bank",
+        subtitle: "Curated system design & behavioral packs (Stripe, Linear, Supabase, Vercel)",
+        url: "/coach/questions",
+        category: "navigation",
+        badge: "Packs",
+      },
+      {
         id: "nav-improve",
         title: "STAR Resume Improver",
         subtitle: "Optimize bullet points using the Google X-Y-Z formula",
@@ -132,6 +141,14 @@ export async function globalSearchAction(query: string = ""): Promise<{
         url: "/coach",
         category: "actions",
         badge: "Practice",
+      },
+      {
+        id: "act-question-bank",
+        title: "Explore Question Bank (Stripe, Linear, Supabase)",
+        subtitle: "Practice company-specific interview prompts with 1-click voice coach",
+        url: "/coach/questions",
+        category: "actions",
+        badge: "Packs",
       },
       {
         id: "act-sync-mailbox",
@@ -313,6 +330,25 @@ export async function globalSearchAction(query: string = ""): Promise<{
       ? `https://careerpilot.app/p/${profile.username}`
       : null;
 
+    const matchedQuestions: SearchResultItem[] = q
+      ? QUESTION_BANK.filter(
+          (item) =>
+            item.question.toLowerCase().includes(q) ||
+            item.company.toLowerCase().includes(q) ||
+            item.role.toLowerCase().includes(q) ||
+            item.tags.some((t) => t.toLowerCase().includes(q))
+        )
+          .slice(0, 3)
+          .map((qb) => ({
+            id: `qb-${qb.id}`,
+            title: `[${qb.company}] ${qb.question.slice(0, 60)}...`,
+            subtitle: `${qb.role} • ${qb.category} (${qb.difficulty})`,
+            badge: qb.company,
+            url: `/coach/questions`,
+            category: "interviews",
+          }))
+      : [];
+
     return {
       success: true,
       publicPortfolioUrl,
@@ -322,6 +358,7 @@ export async function globalSearchAction(query: string = ""): Promise<{
         ...tailoredResults,
         ...jobResults,
         ...resumeResults,
+        ...matchedQuestions,
         ...interviewResults,
         ...matchedPages,
       ],
