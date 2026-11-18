@@ -27,7 +27,9 @@ import {
   Calendar,
   CheckCircle2,
   Building,
+  BookOpen,
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   createInterviewSessionAction,
@@ -235,6 +237,31 @@ export default function InterviewCoachSetupPage() {
         <Button variant="outline" onClick={openHistory} className="gap-2 shrink-0">
           <History className="h-4 w-4" /> Past Sessions
         </Button>
+      </div>
+
+      {/* Company-Specific Question Bank Banner */}
+      <div className="rounded-2xl border border-primary/30 bg-gradient-to-r from-primary/10 via-background to-secondary/10 p-5 md:p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-primary/20 text-primary border-primary/40 text-xs font-semibold gap-1">
+              <Sparkles size={12} /> Curated Tech Packs
+            </Badge>
+            <span className="text-xs text-muted-foreground font-medium">• Stripe, Linear, Supabase, Vercel, YC Startups</span>
+          </div>
+          <h2 className="text-lg md:text-xl font-bold tracking-tight text-foreground">
+            Targeted Company Interview Question Bank
+          </h2>
+          <p className="text-xs md:text-sm text-muted-foreground max-w-xl">
+            Practice battle-tested system design and behavioral questions asked at Stripe, Linear, Supabase, and top YC startups with model answers and instant voice simulations.
+          </p>
+        </div>
+        <Link href="/coach/questions">
+          <Button className="gap-2 font-semibold shadow-sm shrink-0">
+            <BookOpen size={16} />
+            <span>Explore Question Bank</span>
+            <ChevronRight size={16} />
+          </Button>
+        </Link>
       </div>
 
       {/* Quick Mock Templates */}
