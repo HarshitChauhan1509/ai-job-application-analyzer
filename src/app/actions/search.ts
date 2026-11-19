@@ -51,6 +51,14 @@ export async function globalSearchAction(query: string = ""): Promise<{
         badge: "Pipeline",
       },
       {
+        id: "nav-offers",
+        title: "Offer Evaluator & Negotiation Strategist",
+        subtitle: "Model Year 1 Total Comp (TC), simulate equity upside, and craft counter-offers",
+        url: "/offers",
+        category: "navigation",
+        badge: "Offers",
+      },
+      {
         id: "nav-analytics",
         title: "Funnel & Conversion Analytics",
         subtitle: "Pipeline drop-off, ATS correlation, and response velocity metrics",
@@ -158,6 +166,14 @@ export async function globalSearchAction(query: string = ""): Promise<{
         category: "actions",
         badge: "Gmail",
       },
+      {
+        id: "act-evaluate-offer",
+        title: "Evaluate Job Offer & Compensation",
+        subtitle: "Calculate TC breakdown, model startup equity upside, and unlock counter-offers",
+        url: "/offers",
+        category: "actions",
+        badge: "Offers",
+      },
     ];
 
     const matchedPages = !q
@@ -181,7 +197,7 @@ export async function globalSearchAction(query: string = ""): Promise<{
     }
 
     // 2. Fetch User Profile, Applications, Tailored Resumes, Jobs, Resumes, and Interview Sessions
-    const [profile, applications, tailoredResumes, jobs, resumes, interviewSessions] =
+    const [profile, applications, tailoredResumes, jobs, resumes, interviewSessions, jobOffers] =
       await Promise.all([
         prisma.profile.findUnique({
           where: { userId },
@@ -277,6 +293,22 @@ export async function globalSearchAction(query: string = ""): Promise<{
           take: 4,
           orderBy: { createdAt: "desc" },
         }),
+        prisma.jobOffer.findMany({
+          where: {
+            userId,
+            ...(q
+              ? {
+                  OR: [
+                    { company: { contains: q, mode: "insensitive" } },
+                    { role: { contains: q, mode: "insensitive" } },
+                    { status: { contains: q, mode: "insensitive" } },
+                  ],
+                }
+              : {}),
+          },
+          take: 4,
+          orderBy: { createdAt: "desc" },
+        }),
       ]);
 
     const applicationResults: SearchResultItem[] = applications.map((app) => ({
@@ -326,6 +358,15 @@ export async function globalSearchAction(query: string = ""): Promise<{
       category: "interviews",
     }));
 
+    const offerResults: SearchResultItem[] = jobOffers.map((o) => ({
+      id: `offer-${o.id}`,
+      title: `${o.company} Offer — $${(o.annualTC / 1000).toFixed(0)}k Year 1 TC`,
+      subtitle: `${o.role} • Status: ${o.status}`,
+      badge: "Offer",
+      url: `/offers`,
+      category: "applications",
+    }));
+
     const publicPortfolioUrl = profile?.username
       ? `https://careerpilot.app/p/${profile.username}`
       : null;
@@ -355,6 +396,7 @@ export async function globalSearchAction(query: string = ""): Promise<{
       results: [
         ...matchedActions,
         ...applicationResults,
+        ...offerResults,
         ...tailoredResults,
         ...jobResults,
         ...resumeResults,
