@@ -33,7 +33,10 @@ import {
   Printer,
   Clock,
   XCircle,
+  DollarSign,
+  ChevronRight,
 } from "lucide-react";
+import { OfferDialog } from "@/components/offers/offer-dialog";
 import { OutreachModal } from "@/components/dashboard/outreach-modal";
 import { TailorResumeDialog } from "@/components/resumes/tailor-resume-dialog";
 import { FollowUpNudgeDialog } from "@/components/dashboard/followup-nudge-dialog";
@@ -175,6 +178,7 @@ export function ApplicationDetailClient({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [tailorOpen, setTailorOpen] = useState(false);
+  const [offerDialogOpen, setOfferDialogOpen] = useState(false);
 
   const statusMeta = PIPELINE_STATUSES.find((s) => s.value === status) || PIPELINE_STATUSES[0];
 
@@ -396,6 +400,43 @@ export function ApplicationDetailClient({
           )}
         </div>
       </div>
+
+      {/* Active Offer Banner */}
+      {status === "OFFER" && (
+        <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-500/10 via-background to-primary/10 p-5 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Badge className="bg-emerald-600 text-white text-xs font-semibold gap-1">
+                🎉 Offer Stage Active
+              </Badge>
+              <span className="text-xs text-muted-foreground font-medium">
+                • Evaluate compensation & equity upside
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-foreground">
+              Job Offer Received from {initialApplication.job.company}
+            </h3>
+            <p className="text-xs text-muted-foreground max-w-xl">
+              Calculate your Year 1 Total Comp (TC), simulate startup equity scenarios (3x–10x), and generate high-converting AI counter-offer pitch scripts.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              onClick={() => setOfferDialogOpen(true)}
+              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs h-9 shadow-sm"
+            >
+              <DollarSign size={14} />
+              <span>Evaluate Offer & Equity</span>
+            </Button>
+            <Link href="/offers">
+              <Button variant="outline" size="sm" className="gap-1.5 text-xs h-9">
+                <span>View All Offers</span>
+                <ChevronRight size={13} />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      )}
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -801,6 +842,17 @@ export function ApplicationDetailClient({
         defaultJobId={initialApplication.job.id}
         defaultCompany={initialApplication.job.company}
         defaultRole={initialApplication.job.position}
+      />
+
+      <OfferDialog
+        open={offerDialogOpen}
+        onOpenChange={setOfferDialogOpen}
+        applicationId={initialApplication.id}
+        defaultCompany={initialApplication.job.company}
+        defaultRole={initialApplication.job.position}
+        onOfferSaved={() => {
+          router.refresh();
+        }}
       />
     </div>
   );
