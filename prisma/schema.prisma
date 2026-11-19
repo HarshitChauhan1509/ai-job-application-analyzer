@@ -30,6 +30,7 @@ model User {
   emailConnection   EmailConnection?
   syncedEmails      SyncedEmailLog[]
   tailoredResumes   TailoredResume[]
+  jobOffers         JobOffer[]
 }
 
 model Profile {
@@ -146,6 +147,7 @@ model Application {
 
   events ApplicationEvent[]
   syncedEmails SyncedEmailLog[]
+  jobOffers JobOffer[]
 }
 
 model ApplicationEvent {
@@ -373,4 +375,36 @@ model TailoredResume {
   @@index([userId])
   @@index([jobId])
   @@index([baseResumeId])
+}
+
+model JobOffer {
+  id                   String       @id @default(cuid())
+  userId               String
+  user                 User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationId        String?
+  application          Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  company              String
+  role                 String
+  location             String?
+  baseSalary           Float
+  targetBonus          Float        @default(0)
+  signOnBonus          Float        @default(0)
+  equityType           String       @default("OPTIONS") // OPTIONS, RSU, NONE
+  equityShares         Float        @default(0)
+  strikePrice          Float        @default(0)
+  currentValuation     Float        @default(0) // total valuation or 409A share price
+  equityEstimatedValue Float        @default(0) // 4-yr value at current valuation
+  vestingYears         Float        @default(4)
+  vestingCliffMonths   Int          @default(12)
+  annualTC             Float        // Year 1 total comp
+  currency             String       @default("USD")
+  notes                String?
+  negotiationStrategy  String?      // Cached JSON string of generated counter-offer strategies
+  status               String       @default("EVALUATING") // EVALUATING, COUNTERED, ACCEPTED, DECLINED
+  deadline             DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+
+  @@index([userId])
+  @@index([applicationId])
 }
