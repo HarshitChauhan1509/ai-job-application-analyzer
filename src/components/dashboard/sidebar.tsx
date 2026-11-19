@@ -23,6 +23,7 @@ import {
   Flame,
   CreditCard,
   BookOpen,
+  DollarSign,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logoutUserAction } from "@/app/actions/auth";
@@ -33,6 +34,7 @@ const navItems = [
   { name: "Resumes", href: "/resumes", icon: FileText },
   { name: "Jobs", href: "/jobs", icon: Bookmark },
   { name: "Applications", href: "/applications", icon: KanbanSquare },
+  { name: "Offers & TC", href: "/offers", icon: DollarSign },
   { name: "Analytics", href: "/analytics", icon: BarChart3 },
   { name: "AI Coach", href: "/coach", icon: MessageSquare },
   { name: "Question Bank", href: "/coach/questions", icon: BookOpen },
