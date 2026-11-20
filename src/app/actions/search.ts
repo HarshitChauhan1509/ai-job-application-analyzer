@@ -135,6 +135,14 @@ export async function globalSearchAction(query: string = ""): Promise<{
         badge: "1-Click",
       },
       {
+        id: "act-install-extension",
+        title: "Install Browser Extension (Chrome / Edge)",
+        subtitle: "1-Click clip job postings directly from LinkedIn, Indeed, Greenhouse, and Lever",
+        url: "/applications?action=extension",
+        category: "actions",
+        badge: "Extension",
+      },
+      {
         id: "act-tailor-resume",
         title: "Tailor Resume for Role",
         subtitle: "Generate an ATS-optimized, single-page printable PDF resume",
