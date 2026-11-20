@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CareerPilot Job Clipper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo-area">
+        <div class="logo-icon">🚀</div>
+        <div class="logo-text">
+          <h1>CareerPilot</h1>
+          <span class="tagline">1-Click Job Clipper</span>
+        </div>
+      </div>
+      <div class="status-pill" id="connectionPill">
+        <span class="dot"></span>
+        <span id="connectionText">Ready</span>
+      </div>
+    </header>
+
+    <!-- Error Alert Banner -->
+    <div id="errorBanner" class="alert alert-error" style="display: none;">
+      <span id="errorMessage">Error clipping job</span>
+    </div>
+
+    <!-- Main Form View -->
+    <main id="formView" class="form-view">
+      <div class="card">
+        <div class="field-group">
+          <label for="jobTitle">Job Title</label>
+          <input type="text" id="jobTitle" placeholder="e.g. Senior Full Stack Engineer" />
+        </div>
+
+        <div class="field-row">
+          <div class="field-group flex-1">
+            <label for="jobCompany">Company</label>
+            <input type="text" id="jobCompany" placeholder="e.g. Linear, Stripe" />
+          </div>
+          <div class="field-group flex-1">
+            <label for="jobLocation">Location</label>
+            <input type="text" id="jobLocation" placeholder="e.g. Remote" />
+          </div>
+        </div>
+
+        <div class="field-group">
+          <div class="label-row">
+            <label>Job Description</label>
+            <span id="charCount" class="char-count">0 chars</span>
+          </div>
+          <textarea id="jobDescription" rows="4" placeholder="Job description will be automatically detected..."></textarea>
+        </div>
+
+        <div class="field-group">
+          <label>Target Pipeline Stage</label>
+          <div class="stage-selector">
+            <label class="stage-option">
+              <input type="radio" name="targetStage" value="SAVED" checked />
+              <span class="stage-pill">🔖 Saved</span>
+            </label>
+            <label class="stage-option">
+              <input type="radio" name="targetStage" value="APPLIED" />
+              <span class="stage-pill">📤 Applied</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <button id="clipBtn" class="btn btn-primary">
+        <span class="btn-icon">⚡</span>
+        <span id="btnText">Clip & Analyze Fit</span>
+      </button>
+    </main>
+
+    <!-- Success Result View -->
+    <section id="resultView" class="result-view" style="display: none;">
+      <div class="card result-card">
+        <div class="success-icon">✓</div>
+        <h2>Job Clipped to Pipeline!</h2>
+        <p id="resultRole" class="result-role">Senior Full Stack Engineer at Linear</p>
+
+        <div class="match-score-badge">
+          <span class="match-label">ATS Fit Score</span>
+          <span id="matchScoreVal" class="match-val">85%</span>
+        </div>
+
+        <div class="skills-preview" id="skillsPreview">
+          <!-- Skill tags populated via JS -->
+        </div>
+
+        <div class="action-buttons">
+          <a id="viewAppBtn" href="#" target="_blank" class="btn btn-secondary">
+            <span>🚀 Open in Workspace</span>
+          </a>
+          <a id="outreachBtn" href="#" target="_blank" class="btn btn-primary">
+            <span>✉️ Draft Founder Pitch</span>
+          </a>
+        </div>
+      </div>
+
+      <button id="clipAnotherBtn" class="btn btn-link">Clip another posting</button>
+    </section>
+
+    <!-- Host Settings Toggle -->
+    <footer class="footer">
+      <div class="host-row">
+        <span>Host:</span>
+        <input type="text" id="apiHost" value="http://localhost:3000" />
+      </div>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
