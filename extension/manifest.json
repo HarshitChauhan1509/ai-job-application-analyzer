@@ -1,0 +1,50 @@
+{
+  "manifest_version": 3,
+  "name": "CareerPilot — 1-Click Job Description Clipper",
+  "version": "1.0.0",
+  "description": "Clip job postings from LinkedIn, Indeed, Greenhouse, Lever, and Ashby directly into your CareerPilot pipeline with instant ATS match scores.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:3000/*",
+    "https://*.careerpilot.app/*",
+    "https://*.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://*.greenhouse.io/*",
+    "https://*.lever.co/*",
+    "https://*.ashbyhq.com/*",
+    "https://*.workatastartup.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Clip Job to CareerPilot",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.linkedin.com/*",
+        "*://*.indeed.com/*",
+        "*://*.greenhouse.io/*",
+        "*://*.lever.co/*",
+        "*://*.ashbyhq.com/*",
+        "*://*.workatastartup.com/*",
+        "*://*/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
